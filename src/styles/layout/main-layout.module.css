@@ -1,0 +1,15 @@
+.container {
+  @apply min-h-screen;
+}
+
+.sider {
+  @apply border-r;
+}
+
+.logo {
+  @apply p-4 text-xl font-bold border-b;
+}
+
+.content {
+  @apply p-6;
+} 

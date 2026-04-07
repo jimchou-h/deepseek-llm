@@ -1,0 +1,19 @@
+.container {
+  margin-bottom: 0.5rem;
+}
+
+.select {
+  width: 200px;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category {
+  color: #666;
+  font-size: 12px;
+} 

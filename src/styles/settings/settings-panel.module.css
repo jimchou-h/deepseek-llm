@@ -1,0 +1,19 @@
+.container {
+  @apply max-w-xl;
+}
+
+.formActions {
+  @apply flex gap-2;
+}
+
+.modelInfo {
+  @apply mt-4 text-gray-500;
+}
+
+.modelInfoTitle {
+  @apply font-bold mb-2;
+}
+
+.modelInfoList {
+  @apply list-disc list-inside space-y-2;
+} 

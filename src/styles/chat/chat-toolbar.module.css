@@ -1,0 +1,11 @@
+.container {
+  @apply px-4 py-2 border-b flex justify-between items-center;
+}
+
+.title {
+  @apply text-xl font-bold;
+}
+
+.actions {
+  @apply space-x-2;
+} 
