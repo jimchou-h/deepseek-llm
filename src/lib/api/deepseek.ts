@@ -24,13 +24,13 @@ export async function chatCompletion(
   onStreamReasoning?: (content: string) => void,
 ) {
   // const openai = new OpenAI({
-  //   baseURL: 'https://api.siliconflow.cn/v1',
+  //   baseURL: 'https://api.deepseek.com',
   //   apiKey: apiKey,
   //   dangerouslyAllowBrowser: true
   // });
 
   try {
-    const modelName = API_CONFIG.MODELS['chat'];
+    const modelName: string = API_CONFIG.MODELS['chat'];
     // 验证消息序列
     validateMessages(messages, modelName);
 
@@ -48,7 +48,7 @@ export async function chatCompletion(
       throw new Error('请先在设置页面配置您的 DeepSeek API Key');
     }
 
-    const response = await fetch(`${'https://api.siliconflow.cn/v1'}/chat/completions`, {
+    const response = await fetch(`${'https://api.deepseek.com'}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ export async function chatCompletion(
                     const processedArgs = processRequestBody(functionArgs, functionDef.parameters);
                     const result = await executeFunctionCall(functionDef, processedArgs);
 
-                    const secondResponse = await fetch(`${'https://api.siliconflow.cn/v1'}/chat/completions`, {
+                    const secondResponse = await fetch(`${'https://api.deepseek.com'}/chat/completions`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
@@ -290,7 +290,7 @@ export async function getBalance(apiKey: string): Promise<BalanceResponse> {
   }
   console.log(1)
   console.log(API_CONFIG)
-  const response = await fetch(`${'https://api.siliconflow.cn/v1'}/user/balance`, {
+  const response = await fetch(`${'https://api.deepseek.com'}/user/balance`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,

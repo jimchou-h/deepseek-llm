@@ -7,7 +7,11 @@ import styles from '@/styles/chat/session-rail.module.css';
 
 const { Text } = Typography;
 
-export function SessionRail() {
+interface SessionRailProps {
+  onSessionSelect?: () => void;
+}
+
+export function SessionRail({ onSessionSelect }: SessionRailProps) {
   const sessions = useChatStore((s) => s.sessions);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const createSession = useChatStore((s) => s.createSession);
@@ -17,6 +21,11 @@ export function SessionRail() {
 
   const sorted = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
 
+  const selectSession = (id: string) => {
+    setActiveSession(id);
+    onSessionSelect?.();
+  };
+
   return (
     <aside className={styles.rail}>
       <div className={styles.header}>
@@ -25,7 +34,10 @@ export function SessionRail() {
           type="primary"
           size="small"
           icon={<PlusOutlined />}
-          onClick={() => createSession()}
+          onClick={() => {
+            createSession();
+            onSessionSelect?.();
+          }}
         >
           新建
         </Button>
@@ -39,7 +51,7 @@ export function SessionRail() {
           return (
             <List.Item
               className={`${styles.item} ${active ? styles.itemActive : ''}`}
-              onClick={() => setActiveSession(session.id)}
+              onClick={() => selectSession(session.id)}
               actions={[
                 <Popconfirm
                   key="delete"

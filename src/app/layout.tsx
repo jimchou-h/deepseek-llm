@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "@/styles/antd-overrides.css";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { RouteGuard } from "@/components/layout/route-guard";
+import { AppProviders } from "@/components/layout/app-providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,9 +21,7 @@ export default function RootLayout({
   return (
     <html lang="zh">
       <body className={inter.className}>
-        <AntdRegistry>
-          <RouteGuard>{children}</RouteGuard>
-        </AntdRegistry>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

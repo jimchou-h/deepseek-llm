@@ -22,13 +22,13 @@ export async function chatCompletion(
   onStream?: (content: string) => void,
 ) {
   // const openai = new OpenAI({
-  //   baseURL: 'https://api.siliconflow.cn/v1',
+  //   baseURL: 'https://api.deepseek.com',
   //   apiKey: apiKey,
   //   dangerouslyAllowBrowser: true
   // });
 
   try {
-    const modelName = API_CONFIG.MODELS['chat'];
+    const modelName: string = API_CONFIG.MODELS['chat'];
     // 验证消息序列
     validateMessages(messages, modelName);
 
@@ -46,7 +46,7 @@ export async function chatCompletion(
       throw new Error('请先在设置页面配置您的 DeepSeek API Key');
     }
 
-    const response = await fetch(`${'https://api.siliconflow.cn/v1'}/chat/completions`, {
+    const response = await fetch(`${'https://api.deepseek.com'}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export async function chatCompletion(
                     const functionArgs = JSON.parse(currentToolCall.function.arguments);
                     const result = await executeFunctionCall(functionDef, functionArgs);
 
-                    const secondResponse = await fetch(`${'https://api.siliconflow.cn/v1'}/chat/completions`, {
+                    const secondResponse = await fetch(`${'https://api.deepseek.com'}/chat/completions`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
@@ -271,7 +271,7 @@ export async function getBalance(apiKey: string): Promise<BalanceResponse> {
   }
   console.log(1)
   console.log(API_CONFIG)
-  const response = await fetch(`${'https://api.siliconflow.cn/v1'}/user/balance`, {
+  const response = await fetch(`${'https://api.deepseek.com'}/user/balance`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -353,7 +353,7 @@ export async function openUploadFile(file: File, apiKey: string): Promise<Upload
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${'https://api.siliconflow.cn/v1'}/upload`, {
+  const response = await fetch(`${'https://api.deepseek.com'}/upload`, {
     method: 'POST',
     body: formData,
     headers: {
@@ -381,7 +381,7 @@ export async function openUploadFile(file: File, apiKey: string): Promise<Upload
  * @returns 创建的会话信息
  */
 export async function openCreateSession(character_id: string | null = null, apiKey: string): Promise<CreateSessionResponse> {
-  const response = await fetch(`${'https://api.siliconflow.cn/v1'}/chat_session/create`, {
+  const response = await fetch(`${'https://api.deepseek.com'}/chat_session/create`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -417,7 +417,7 @@ export async function openChatCompletion({
   apiKey,
 
 }: CompletionOptions): Promise<void> {
-  const response = await fetch(`${'https://api.siliconflow.cn/v1'}/chat/completion`, {
+  const response = await fetch(`${'https://api.deepseek.com'}/chat/completion`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

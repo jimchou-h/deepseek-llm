@@ -2,7 +2,7 @@
 
 - [x] 1.1 添加 `react-virtuoso` 依赖
 - [x] 1.2 扩展 `Session` / chat store 类型（`id`、`title`、`messages`、时间戳）
-- [ ] 1.3 将 Ant Design `ConfigProvider` 的 primary 对齐 DeepSeek 蓝（`#1890ff`），若尚未全局设置
+- [x] 1.3 将 Ant Design `ConfigProvider` 的 primary 对齐 DeepSeek 蓝（`#1890ff`），若尚未全局设置
 
 ## 2. Chat store：多会话 + 上下文条数
 
@@ -22,14 +22,14 @@
 
 - [x] 4.1 重组对话页为「会话轨 + 消息列」（保留应用侧栏）
 - [x] 4.2 实现会话列表 UI：新建 / 选中 / 删除；选中态使用 DeepSeek 蓝
-- [ ] 4.3 窄屏：会话轨可折叠或 Drawer
-- [ ] 4.4 应用 AI-Native 轻量壳样式（中性底、蓝色强调、粘底输入区）
+- [x] 4.3 窄屏：会话轨可折叠或 Drawer
+- [x] 4.4 应用 AI-Native 轻量壳样式（中性底、蓝色强调、粘底输入区）
 
 ## 5. 消息虚拟列表
 
-- [ ] 5.1 用 Virtuoso 替换 `ChatWindow` 全量 `messages.map` + Framer Motion 列表包裹
-- [ ] 5.2 支持动态高度气泡、流式更新最后一项、贴近底部时 follow-output
-- [ ] 5.3 保留气泡上的复制/删除，以及 reasoning/markdown 渲染
+- [x] 5.1 用 Virtuoso 替换 `ChatWindow` 全量 `messages.map` + Framer Motion 列表包裹
+- [x] 5.2 支持动态高度气泡、流式更新最后一项、贴近底部时 follow-output
+- [x] 5.3 保留气泡上的复制/删除，以及 reasoning/markdown 渲染
 
 ## 6. 验证
 

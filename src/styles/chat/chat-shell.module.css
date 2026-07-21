@@ -1,6 +1,9 @@
 .shell {
   flex-direction: row !important;
   background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .messageColumn {
@@ -12,6 +15,16 @@
   background: #fff;
 }
 
+.mobileBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
 .messagePane {
   flex: 1;
   min-height: 0;
@@ -21,4 +34,18 @@
 .inputPane {
   border-top: 1px solid #e5e7eb;
   background: #fff;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.drawerRail {
+  height: 100%;
+}
+
+.drawerRail :global(aside) {
+  width: 100%;
+  border-right: none;
+  height: 100%;
 }
