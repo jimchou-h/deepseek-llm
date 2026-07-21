@@ -8,12 +8,17 @@ import {
   titleAfterFirstUserMessage,
   DEFAULT_SESSION_TITLE,
 } from '@/lib/chat/session-utils';
+import {
+  DEFAULT_CONTEXT_MESSAGE_LIMIT,
+  normalizeContextMessageLimit,
+} from '@/lib/chat/context-window';
 
 export type { Session };
 
 interface ChatState {
   sessions: Session[];
   activeSessionId: string | null;
+  contextMessageLimit: number;
   loadingBySessionId: Record<string, boolean>;
   streamingContentBySessionId: Record<string, string | null>;
   streamingReasoningBySessionId: Record<string, string | null>;
@@ -24,6 +29,7 @@ interface ChatState {
   addMessage: (sessionId: string, message: Message) => void;
   deleteMessage: (sessionId: string, timestamp: number) => void;
   clearMessages: (sessionId: string) => void;
+  updateContextMessageLimit: (limit: number) => void;
   setLoading: (sessionId: string, loading: boolean) => void;
   setCurrentStreamingMessage: (sessionId: string, content: string | null) => void;
   setCurrentStreamingReasoningMessage: (sessionId: string, content: string | null) => void;
@@ -57,6 +63,7 @@ export const useChatStore = create<ChatState>()(
     (set, get) => ({
       sessions: [initialSession],
       activeSessionId: initialSession.id,
+      contextMessageLimit: DEFAULT_CONTEXT_MESSAGE_LIMIT,
       loadingBySessionId: {},
       streamingContentBySessionId: {},
       streamingReasoningBySessionId: {},
@@ -174,6 +181,10 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
+      updateContextMessageLimit: (limit) => {
+        set({ contextMessageLimit: normalizeContextMessageLimit(limit) });
+      },
+
       setLoading: (sessionId, loading) => {
         set((state) => ({
           loadingBySessionId: {
@@ -226,17 +237,22 @@ export const useChatStore = create<ChatState>()(
       partialize: (state) => ({
         sessions: state.sessions,
         activeSessionId: state.activeSessionId,
+        contextMessageLimit: state.contextMessageLimit,
       }),
       migrate: (persistedState) => {
         const legacy = (persistedState ?? {}) as {
           messages?: Message[];
           sessions?: Session[];
           activeSessionId?: string | null;
+          contextMessageLimit?: number;
         };
         const migrated = migrateLegacyChatState(legacy);
         return {
           sessions: migrated.sessions,
           activeSessionId: migrated.activeSessionId,
+          contextMessageLimit: normalizeContextMessageLimit(
+            legacy.contextMessageLimit ?? DEFAULT_CONTEXT_MESSAGE_LIMIT
+          ),
         };
       },
     }

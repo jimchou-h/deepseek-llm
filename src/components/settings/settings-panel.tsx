@@ -1,22 +1,32 @@
 'use client';
 
-import { Form, InputNumber, Select, Input, Button, message } from 'antd';
+import { Form, InputNumber, Select, Input, Button, message, Typography } from 'antd';
 import { useSettingsStore } from '@/lib/store/settings-store';
-import { API_CONFIG } from '@/lib/api/config';
+import { useChatStore } from '@/lib/store/chat-store';
+import {
+  DEFAULT_CONTEXT_MESSAGE_LIMIT,
+  MIN_CONTEXT_MESSAGE_LIMIT,
+} from '@/lib/chat/context-window';
 import { useState } from 'react';
 import { ChatSettings } from '@/types';
 
+type SettingsFormValues = ChatSettings & { contextMessageLimit: number };
+
 export function SettingsPanel() {
   const { settings, updateSettings } = useSettingsStore();
+  const contextMessageLimit = useChatStore((s) => s.contextMessageLimit);
+  const updateContextMessageLimit = useChatStore((s) => s.updateContextMessageLimit);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (values: ChatSettings) => {
+  const handleSubmit = async (values: SettingsFormValues) => {
     try {
       setLoading(true);
-      updateSettings(values);
+      const { contextMessageLimit: limit, ...chatSettings } = values;
+      updateSettings(chatSettings);
+      updateContextMessageLimit(limit);
       message.success('设置保存成功');
-    } catch (error) {
+    } catch {
       message.error('保存失败，请重试');
     } finally {
       setLoading(false);
@@ -28,7 +38,10 @@ export function SettingsPanel() {
       <Form
         form={form}
         layout="vertical"
-        initialValues={settings}
+        initialValues={{
+          ...settings,
+          contextMessageLimit: contextMessageLimit ?? DEFAULT_CONTEXT_MESSAGE_LIMIT,
+        }}
         onFinish={handleSubmit}
       >
         <Form.Item
@@ -81,6 +94,27 @@ export function SettingsPanel() {
           tooltip="设置 AI 的角色和行为"
         >
           <Input.TextArea rows={4} placeholder="输入系统提示词..." />
+        </Form.Item>
+
+        <Form.Item
+          label="发送上下文条数"
+          name="contextMessageLimit"
+          tooltip="每次请求最多携带的最近对话消息条数；系统提示词不计入。界面仍保留完整历史。"
+          extra={
+            <Typography.Text type="secondary">
+              默认 {DEFAULT_CONTEXT_MESSAGE_LIMIT}。减小该值可降低 token 消耗；聊天窗口仍显示全部消息。
+            </Typography.Text>
+          }
+          rules={[
+            { required: true, message: '请输入上下文条数' },
+            {
+              type: 'number',
+              min: MIN_CONTEXT_MESSAGE_LIMIT,
+              message: `最小为 ${MIN_CONTEXT_MESSAGE_LIMIT}`,
+            },
+          ]}
+        >
+          <InputNumber min={MIN_CONTEXT_MESSAGE_LIMIT} step={1} className="w-full" />
         </Form.Item>
 
         <Form.Item>

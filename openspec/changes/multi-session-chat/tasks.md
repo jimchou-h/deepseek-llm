@@ -9,7 +9,7 @@
 - [x] 2.1 重构 `chat-store` 为 `sessions` + `activeSessionId` + 按会话的 streaming/loading map
 - [x] 2.2 实现 CRUD：新建 / 切换 / 删除会话；消息活动时更新 `updatedAt`
 - [x] 2.3 首条用户消息自动标题（截断约 30 字）；默认标题「新对话」
-- [ ] 2.4 增加 `contextMessageLimit`（默认 50）及 `updateContextMessageLimit`
+- [x] 2.4 增加 `contextMessageLimit`（默认 50）及 `updateContextMessageLimit`
 - [x] 2.5 实现 persist 迁移：旧版顶层 `messages` → 一个默认会话
 - [x] 2.6 确保流式回调闭包捕获 `sessionId`，绝不写到错误会话
 

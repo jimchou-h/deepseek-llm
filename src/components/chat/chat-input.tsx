@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/lib/store/settings-store';
 import { chatCompletion } from '@/lib/api/deepseek';
 import { openUploadFile } from '@/lib/api/deepseekopenapi';
 import { useChatShortcuts } from '@/hooks/use-chat-shortcuts';
+import { buildApiMessages } from '@/lib/chat/context-window';
 import styles from '@/styles/chat/chat-input.module.css';
 import { TemplateSelector } from './template-selector';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
@@ -97,13 +98,12 @@ export const ChatInput = () => {
       setCurrentStreamingMessage(sessionId, '');
       setCurrentStreamingReasoningMessage(sessionId, '');
 
-      const messageList = settings.systemPrompt
-        ? [
-            { role: 'system' as const, content: settings.systemPrompt, timestamp: 0 },
-            ...sessionMessages,
-            userMessage,
-          ]
-        : [...sessionMessages, userMessage];
+      const contextMessageLimit = useChatStore.getState().contextMessageLimit;
+      const messageList = buildApiMessages({
+        systemPrompt: settings.systemPrompt,
+        messages: [...sessionMessages, userMessage],
+        limit: contextMessageLimit,
+      });
 
       let streamContent = '';
       let reasoningContent = '';

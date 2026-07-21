@@ -7,6 +7,7 @@ function resetStore() {
   useChatStore.setState({
     sessions: [session],
     activeSessionId: session.id,
+    contextMessageLimit: 50,
     loadingBySessionId: {},
     streamingContentBySessionId: {},
     streamingReasoningBySessionId: {},
@@ -80,5 +81,13 @@ describe('useChatStore multi-session', () => {
     expect(useChatStore.getState().isSessionLoading(b)).toBe(false);
     expect(useChatStore.getState().getSessionStreaming(a).content).toBe('hello');
     expect(useChatStore.getState().getSessionStreaming(b).content).toBeNull();
+  });
+
+  it('persists context message limit with a floor of 1', () => {
+    expect(useChatStore.getState().contextMessageLimit).toBe(50);
+    useChatStore.getState().updateContextMessageLimit(10);
+    expect(useChatStore.getState().contextMessageLimit).toBe(10);
+    useChatStore.getState().updateContextMessageLimit(0);
+    expect(useChatStore.getState().contextMessageLimit).toBe(1);
   });
 });
