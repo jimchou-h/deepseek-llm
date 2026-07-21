@@ -1,17 +1,22 @@
 .container {
   flex: 1;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .messageList {
-  height: calc(100vh - 160px);
-  overflow-y: auto;
+  flex: 1;
+  height: 100% !important;
   padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.virtuosoItem {
+  padding-bottom: 1.5rem;
 }
 
 /* 自定义滚动条样式 */
@@ -45,7 +50,7 @@
 }
 
 .messageCard {
-  @apply max-w-[85%] rounded-lg shadow-sm;
+  @apply max-w-[85%] rounded-lg shadow-sm relative;
 }
 
 .messageCardAssistant {
@@ -92,4 +97,23 @@
 
 .loadingWrapper {
   @apply flex justify-center py-4;
-} 
+}
+
+/* 操作按钮样式 */
+.messageCard :global(.ant-card-extra) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 10;
+}
+
+.messageCard:hover :global(.ant-card-extra) {
+  opacity: 1;
+}
+
+.messageCard :global(.ant-card-extra) .flex {
+  display: flex !important;
+  gap: 4px;
+}

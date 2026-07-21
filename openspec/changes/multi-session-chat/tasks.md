@@ -1,6 +1,6 @@
 ## 1. 准备与依赖
 
-- [ ] 1.1 添加 `react-virtuoso` 依赖
+- [x] 1.1 添加 `react-virtuoso` 依赖
 - [x] 1.2 扩展 `Session` / chat store 类型（`id`、`title`、`messages`、时间戳）
 - [ ] 1.3 将 Ant Design `ConfigProvider` 的 primary 对齐 DeepSeek 蓝（`#1890ff`），若尚未全局设置
 
@@ -15,8 +15,8 @@
 
 ## 3. 发送路径上下文窗口 + 设置页
 
-- [ ] 3.1 在 `chat-input`（或共享 helper）中组装 API 消息：`[system?] + slice(-limit)`，取自目标会话
-- [ ] 3.2 设置页增加上下文条数控件（最小 1、可持久化、说明文案：UI 仍保留完整历史）
+- [x] 3.1 在 `chat-input`（或共享 helper）中组装 API 消息：`[system?] + slice(-limit)`，取自目标会话
+- [x] 3.2 设置页增加上下文条数控件（最小 1、可持久化、说明文案：UI 仍保留完整历史）
 
 ## 4. Chat 壳层 redesign
 
