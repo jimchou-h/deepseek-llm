@@ -1,12 +1,16 @@
 'use client';
 
 import { Button, Tooltip, Modal, message } from 'antd';
-import { DeleteOutlined, DownloadOutlined, ClearOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState } from 'react';
 
 export function ChatToolbar() {
-  const { messages, clearMessages } = useChatStore();
+  const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const sessions = useChatStore((s) => s.sessions);
+  const clearMessages = useChatStore((s) => s.clearMessages);
+  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
+  const messages = activeSession?.messages ?? [];
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleClear = () => {
@@ -14,21 +18,23 @@ export function ChatToolbar() {
   };
 
   const confirmClear = () => {
-    clearMessages();
+    if (activeSessionId) {
+      clearMessages(activeSessionId);
+    }
     setIsModalOpen(false);
     message.success('对话已清空');
   };
 
   const handleExport = () => {
     try {
-      const chatHistory = messages.map(msg => ({
+      const chatHistory = messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
-        time: new Date(msg.timestamp).toLocaleString()
+        time: new Date(msg.timestamp).toLocaleString(),
       }));
 
       const blob = new Blob([JSON.stringify(chatHistory, null, 2)], {
-        type: 'application/json'
+        type: 'application/json',
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -39,7 +45,7 @@ export function ChatToolbar() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
@@ -72,8 +78,8 @@ export function ChatToolbar() {
         okText="确认"
         cancelText="取消"
       >
-        <p>确定要清空所有对话记录吗？此操作不可恢复。</p>
+        <p>确定要清空当前会话的对话记录吗？此操作不可恢复。</p>
       </Modal>
     </div>
   );
-} 
+}

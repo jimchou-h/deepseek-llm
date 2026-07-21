@@ -10,22 +10,28 @@ import { openUploadFile } from '@/lib/api/deepseekopenapi';
 import { useChatShortcuts } from '@/hooks/use-chat-shortcuts';
 import styles from '@/styles/chat/chat-input.module.css';
 import { TemplateSelector } from './template-selector';
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 export const ChatInput = () => {
   const [input, setInput] = useState('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploadedFileIds, setUploadedFileIds] = useState<string[]>([]);
-  const { 
-    addMessage, 
-    messages, 
-    isLoading, 
-    setLoading, 
-    clearMessages,
-    setCurrentStreamingMessage,
-    setCurrentStreamingReasoningMessage,
-  } = useChatStore();
+
+  const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const sessions = useChatStore((s) => s.sessions);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const clearMessages = useChatStore((s) => s.clearMessages);
+  const setLoading = useChatStore((s) => s.setLoading);
+  const setCurrentStreamingMessage = useChatStore((s) => s.setCurrentStreamingMessage);
+  const setCurrentStreamingReasoningMessage = useChatStore(
+    (s) => s.setCurrentStreamingReasoningMessage
+  );
+  const isLoading = useChatStore((s) => s.isSessionLoading(s.activeSessionId));
+
+  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
+  const messages = activeSession?.messages ?? [];
+
   const { settings, apiKey, updateSettings } = useSettingsStore();
 
   const handleFileUpload = async (file: File) => {
@@ -43,13 +49,12 @@ export const ChatInput = () => {
     try {
       const result = await openUploadFile(file, apiKey);
       if (result.code === 0) {
-        setUploadedFileIds(prev => [...prev, result.data.biz_data.id]);
+        setUploadedFileIds((prev) => [...prev, result.data.biz_data.id]);
         message.success(`文件 "${file.name}" 上传成功`);
         return true;
-      } else {
-        message.error(result.msg || '文件上传失败');
-        return Upload.LIST_IGNORE;
       }
+      message.error(result.msg || '文件上传失败');
+      return Upload.LIST_IGNORE;
     } catch (error) {
       if (error instanceof Error) {
         message.error(error.message);
@@ -61,8 +66,7 @@ export const ChatInput = () => {
   };
 
   const handleFileRemove = (file: UploadFile) => {
-    setFileList(prev => prev.filter(f => f.uid !== file.uid));
-    // 这里可以添加从服务器删除文件的逻辑，如果需要的话
+    setFileList((prev) => prev.filter((f) => f.uid !== file.uid));
   };
 
   const sendMessage = async (content: string, reasoning_content?: string) => {
@@ -71,51 +75,59 @@ export const ChatInput = () => {
       return;
     }
 
+    const sessionId = useChatStore.getState().activeSessionId;
+    if (!sessionId) {
+      message.error('没有活跃会话');
+      return;
+    }
+
+    const sessionMessages =
+      useChatStore.getState().sessions.find((s) => s.id === sessionId)?.messages ?? [];
+
     const userMessage = {
       role: 'user' as const,
       content: content.trim(),
       timestamp: Date.now(),
-      reasoning_content: reasoning_content ? reasoning_content?.trim() : '',
+      reasoning_content: reasoning_content ? reasoning_content.trim() : '',
     };
 
     try {
-      addMessage(userMessage);
-      setLoading(true);
-      setCurrentStreamingMessage('');
-      setCurrentStreamingReasoningMessage('');
+      addMessage(sessionId, userMessage);
+      setLoading(sessionId, true);
+      setCurrentStreamingMessage(sessionId, '');
+      setCurrentStreamingReasoningMessage(sessionId, '');
 
       const messageList = settings.systemPrompt
         ? [
             { role: 'system' as const, content: settings.systemPrompt, timestamp: 0 },
-            ...messages,
+            ...sessionMessages,
             userMessage,
           ]
-        : [...messages, userMessage];
+        : [...sessionMessages, userMessage];
 
       let streamContent = '';
       let reasoningContent = '';
       const response = await chatCompletion(
-        messageList as ChatCompletionMessageParam[], 
-        settings, 
+        messageList as ChatCompletionMessageParam[],
+        settings,
         apiKey,
-        (content: string) => {
-          streamContent += content;
-          setCurrentStreamingMessage(streamContent);
+        (chunk: string) => {
+          streamContent += chunk;
+          setCurrentStreamingMessage(sessionId, streamContent);
         },
-        (content: string) => {
-          reasoningContent += content;
-          setCurrentStreamingReasoningMessage(reasoningContent);
+        (chunk: string) => {
+          reasoningContent += chunk;
+          setCurrentStreamingReasoningMessage(sessionId, reasoningContent);
         }
       );
 
-      addMessage({
+      addMessage(sessionId, {
         role: 'assistant',
         content: response.content,
         timestamp: Date.now(),
         reasoning_content: response.reasoningContent,
       });
 
-      // 清空文件列表和ID
       setFileList([]);
       setUploadedFileIds([]);
     } catch (error) {
@@ -126,9 +138,9 @@ export const ChatInput = () => {
       }
       console.error(error);
     } finally {
-      setLoading(false);
-      setCurrentStreamingMessage(null);
-      setCurrentStreamingReasoningMessage(null);
+      setLoading(sessionId, false);
+      setCurrentStreamingMessage(sessionId, null);
+      setCurrentStreamingReasoningMessage(sessionId, null);
     }
   };
 
@@ -142,11 +154,11 @@ export const ChatInput = () => {
   useChatShortcuts({
     onSend: handleSubmit,
     onClear: () => {
-      if (messages.length > 0) {
+      if (messages.length > 0 && activeSessionId) {
         Modal.confirm({
           title: '确认清空',
-          content: '确定要清空所有对话记录吗？此操作不可恢复。',
-          onOk: clearMessages,
+          content: '确定要清空当前会话的对话记录吗？此操作不可恢复。',
+          onOk: () => clearMessages(activeSessionId),
         });
       }
     },
@@ -154,14 +166,14 @@ export const ChatInput = () => {
 
   const handleExport = () => {
     try {
-      const chatHistory = messages.map(msg => ({
+      const chatHistory = messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
-        time: new Date(msg.timestamp).toLocaleString()
+        time: new Date(msg.timestamp).toLocaleString(),
       }));
 
       const blob = new Blob([JSON.stringify(chatHistory, null, 2)], {
-        type: 'application/json'
+        type: 'application/json',
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -172,50 +184,33 @@ export const ChatInput = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
 
   const handleClear = () => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && activeSessionId) {
       Modal.confirm({
         title: '确认清空',
-        content: '确定要清空所有对话记录吗？此操作不可恢复。',
-        onOk: clearMessages,
+        content: '确定要清空当前会话的对话记录吗？此操作不可恢复。',
+        onOk: () => clearMessages(activeSessionId),
       });
     }
   };
 
   const handleTemplateSelect = async (prompt: string) => {
-    if (isLoading) return;
+    if (isLoading || !activeSessionId) return;
     updateSettings({ systemPrompt: prompt });
-    clearMessages();
-    message.success('已应用模板，对话已重置');
+    clearMessages(activeSessionId);
+    message.success('已应用模板，当前会话已重置');
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.toolbar}>
-        <TemplateSelector 
-          onSelect={handleTemplateSelect}
-          disabled={isLoading} 
-        />
+        <TemplateSelector onSelect={handleTemplateSelect} disabled={isLoading} />
         <div className={styles.toolbarActions}>
-          {/* <Upload
-            multiple
-            showUploadList={false}
-            beforeUpload={handleFileUpload}
-            onChange={({ fileList }) => setFileList(fileList)}
-            fileList={fileList}
-          >
-            <Tooltip title="上传文件">
-              <Button
-                icon={<PaperClipOutlined />}
-                disabled={isLoading}
-              />
-            </Tooltip>
-          </Upload> */}
           <Tooltip title="导出对话">
             <Button
               icon={<DownloadOutlined />}
@@ -237,7 +232,11 @@ export const ChatInput = () => {
           <Input.TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={fileList.length > 0 ? "请输入关于文件的问题..." : "输入消息... (Ctrl + Enter 发送)"}
+            placeholder={
+              fileList.length > 0
+                ? '请输入关于文件的问题...'
+                : '输入消息... (Ctrl + Enter 发送)'
+            }
             autoSize={{ minRows: 1, maxRows: 4 }}
             className={styles.textarea}
           />
@@ -255,7 +254,7 @@ export const ChatInput = () => {
         </div>
         {fileList.length > 0 && (
           <div className={styles.fileList}>
-            {fileList.map(file => (
+            {fileList.map((file) => (
               <div key={file.uid} className={styles.fileItem}>
                 <PaperClipOutlined /> {file.name}
                 <Button
@@ -273,4 +272,4 @@ export const ChatInput = () => {
       </form>
     </div>
   );
-}; 
+};

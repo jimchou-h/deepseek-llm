@@ -1,0 +1,24 @@
+.shell {
+  flex-direction: row !important;
+  background: #f1f5f9;
+}
+
+.messageColumn {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.messagePane {
+  flex: 1;
+  min-height: 0;
+  background: #f8fafc;
+}
+
+.inputPane {
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
