@@ -19,9 +19,6 @@ interface ChatState {
   sessions: Session[];
   activeSessionId: string | null;
   contextMessageLimit: number;
-  loadingBySessionId: Record<string, boolean>;
-  streamingContentBySessionId: Record<string, string | null>;
-  streamingReasoningBySessionId: Record<string, string | null>;
 
   createSession: () => string;
   setActiveSession: (id: string) => void;
@@ -30,15 +27,7 @@ interface ChatState {
   deleteMessage: (sessionId: string, timestamp: number) => void;
   clearMessages: (sessionId: string) => void;
   updateContextMessageLimit: (limit: number) => void;
-  setLoading: (sessionId: string, loading: boolean) => void;
-  setCurrentStreamingMessage: (sessionId: string, content: string | null) => void;
-  setCurrentStreamingReasoningMessage: (sessionId: string, content: string | null) => void;
   getActiveSession: () => Session | null;
-  isSessionLoading: (sessionId: string | null) => boolean;
-  getSessionStreaming: (sessionId: string | null) => {
-    content: string | null;
-    reasoning: string | null;
-  };
 }
 
 function ensureActiveSession(state: Pick<ChatState, 'sessions' | 'activeSessionId'>): {
@@ -64,9 +53,6 @@ export const useChatStore = create<ChatState>()(
       sessions: [initialSession],
       activeSessionId: initialSession.id,
       contextMessageLimit: DEFAULT_CONTEXT_MESSAGE_LIMIT,
-      loadingBySessionId: {},
-      streamingContentBySessionId: {},
-      streamingReasoningBySessionId: {},
 
       createSession: () => {
         const session = createEmptySession();
@@ -86,21 +72,12 @@ export const useChatStore = create<ChatState>()(
       deleteSession: (id) => {
         set((state) => {
           const remaining = state.sessions.filter((s) => s.id !== id);
-          const nextLoading = { ...state.loadingBySessionId };
-          const nextStreaming = { ...state.streamingContentBySessionId };
-          const nextReasoning = { ...state.streamingReasoningBySessionId };
-          delete nextLoading[id];
-          delete nextStreaming[id];
-          delete nextReasoning[id];
 
           if (remaining.length === 0) {
             const session = createEmptySession();
             return {
               sessions: [session],
               activeSessionId: session.id,
-              loadingBySessionId: nextLoading,
-              streamingContentBySessionId: nextStreaming,
-              streamingReasoningBySessionId: nextReasoning,
             };
           }
 
@@ -110,9 +87,6 @@ export const useChatStore = create<ChatState>()(
           return {
             sessions: remaining,
             activeSessionId,
-            loadingBySessionId: nextLoading,
-            streamingContentBySessionId: nextStreaming,
-            streamingReasoningBySessionId: nextReasoning,
           };
         });
       },
@@ -133,14 +107,6 @@ export const useChatStore = create<ChatState>()(
               updatedAt: Date.now(),
             };
           }),
-          streamingContentBySessionId: {
-            ...state.streamingContentBySessionId,
-            [sessionId]: null,
-          },
-          streamingReasoningBySessionId: {
-            ...state.streamingReasoningBySessionId,
-            [sessionId]: null,
-          },
         }));
       },
 
@@ -170,14 +136,6 @@ export const useChatStore = create<ChatState>()(
                 }
               : session
           ),
-          streamingContentBySessionId: {
-            ...state.streamingContentBySessionId,
-            [sessionId]: null,
-          },
-          streamingReasoningBySessionId: {
-            ...state.streamingReasoningBySessionId,
-            [sessionId]: null,
-          },
         }));
       },
 
@@ -185,50 +143,9 @@ export const useChatStore = create<ChatState>()(
         set({ contextMessageLimit: normalizeContextMessageLimit(limit) });
       },
 
-      setLoading: (sessionId, loading) => {
-        set((state) => ({
-          loadingBySessionId: {
-            ...state.loadingBySessionId,
-            [sessionId]: loading,
-          },
-        }));
-      },
-
-      setCurrentStreamingMessage: (sessionId, content) => {
-        set((state) => ({
-          streamingContentBySessionId: {
-            ...state.streamingContentBySessionId,
-            [sessionId]: content,
-          },
-        }));
-      },
-
-      setCurrentStreamingReasoningMessage: (sessionId, content) => {
-        set((state) => ({
-          streamingReasoningBySessionId: {
-            ...state.streamingReasoningBySessionId,
-            [sessionId]: content,
-          },
-        }));
-      },
-
       getActiveSession: () => {
         const { sessions, activeSessionId } = ensureActiveSession(get());
         return sessions.find((s) => s.id === activeSessionId) ?? null;
-      },
-
-      isSessionLoading: (sessionId) => {
-        if (!sessionId) return false;
-        return Boolean(get().loadingBySessionId[sessionId]);
-      },
-
-      getSessionStreaming: (sessionId) => {
-        if (!sessionId) return { content: null, reasoning: null };
-        const state = get();
-        return {
-          content: state.streamingContentBySessionId[sessionId] ?? null,
-          reasoning: state.streamingReasoningBySessionId[sessionId] ?? null,
-        };
       },
     }),
     {

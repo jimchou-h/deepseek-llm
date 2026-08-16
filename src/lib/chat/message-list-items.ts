@@ -8,13 +8,16 @@ export function buildMessageListItems(options: {
   messages: Message[];
   streamingContent: string | null;
   streamingReasoning: string | null;
+  isLoading: boolean;
 }): MessageListItem[] {
   const items: MessageListItem[] = options.messages.map((message) => ({
     kind: 'message',
     message,
   }));
 
-  if (options.streamingContent || options.streamingReasoning) {
+  const hasStream =
+    Boolean(options.streamingContent) || Boolean(options.streamingReasoning);
+  if (options.isLoading && hasStream) {
     items.push({
       kind: 'streaming',
       content: options.streamingContent,

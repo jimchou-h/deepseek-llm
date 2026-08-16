@@ -4,15 +4,20 @@ import { useState } from 'react';
 import { Input, Button, message, Tooltip, Modal, Upload } from 'antd';
 import { SendOutlined, DeleteOutlined, DownloadOutlined, PaperClipOutlined } from '@ant-design/icons';
 import { useChatStore } from '@/lib/store/chat-store';
+import { useChatStreamingStore } from '@/lib/store/chat-streaming-store';
 import { useSettingsStore } from '@/lib/store/settings-store';
 import { chatCompletion } from '@/lib/api/deepseek';
 import { openUploadFile } from '@/lib/api/deepseekopenapi';
 import { useChatShortcuts } from '@/hooks/use-chat-shortcuts';
 import { buildApiMessages } from '@/lib/chat/context-window';
+import { createRafThrottle } from '@/lib/chat/raf-throttle';
 import styles from '@/styles/chat/chat-input.module.css';
 import { TemplateSelector } from './template-selector';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import type { UploadFile } from 'antd/es/upload/interface';
+import type { Message } from '@/types';
+
+const EMPTY_MESSAGES: Message[] = [];
 
 export const ChatInput = () => {
   const [input, setInput] = useState('');
@@ -20,18 +25,17 @@ export const ChatInput = () => {
   const [uploadedFileIds, setUploadedFileIds] = useState<string[]>([]);
 
   const activeSessionId = useChatStore((s) => s.activeSessionId);
-  const sessions = useChatStore((s) => s.sessions);
+  const messages = useChatStore((s) => {
+    const id = s.activeSessionId;
+    if (!id) return EMPTY_MESSAGES;
+    return s.sessions.find((session) => session.id === id)?.messages ?? EMPTY_MESSAGES;
+  });
   const addMessage = useChatStore((s) => s.addMessage);
   const clearMessages = useChatStore((s) => s.clearMessages);
-  const setLoading = useChatStore((s) => s.setLoading);
-  const setCurrentStreamingMessage = useChatStore((s) => s.setCurrentStreamingMessage);
-  const setCurrentStreamingReasoningMessage = useChatStore(
-    (s) => s.setCurrentStreamingReasoningMessage
-  );
-  const isLoading = useChatStore((s) => s.isSessionLoading(s.activeSessionId));
 
-  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
-  const messages = activeSession?.messages ?? [];
+  const isLoading = useChatStreamingStore((s) =>
+    Boolean(activeSessionId && s.loadingBySessionId[activeSessionId])
+  );
 
   const { settings, apiKey, updateSettings } = useSettingsStore();
 
@@ -82,6 +86,7 @@ export const ChatInput = () => {
       return;
     }
 
+    const streaming = useChatStreamingStore.getState();
     const sessionMessages =
       useChatStore.getState().sessions.find((s) => s.id === sessionId)?.messages ?? [];
 
@@ -92,11 +97,18 @@ export const ChatInput = () => {
       reasoning_content: reasoning_content ? reasoning_content.trim() : '',
     };
 
+    const pushContent = createRafThrottle((value) => {
+      useChatStreamingStore.getState().setStreamingContent(sessionId, value);
+    });
+    const pushReasoning = createRafThrottle((value) => {
+      useChatStreamingStore.getState().setStreamingReasoning(sessionId, value);
+    });
+
     try {
       addMessage(sessionId, userMessage);
-      setLoading(sessionId, true);
-      setCurrentStreamingMessage(sessionId, '');
-      setCurrentStreamingReasoningMessage(sessionId, '');
+      streaming.setLoading(sessionId, true);
+      streaming.setStreamingContent(sessionId, '');
+      streaming.setStreamingReasoning(sessionId, '');
 
       const contextMessageLimit = useChatStore.getState().contextMessageLimit;
       const messageList = buildApiMessages({
@@ -107,17 +119,18 @@ export const ChatInput = () => {
 
       let streamContent = '';
       let reasoningContent = '';
+
       const response = await chatCompletion(
         messageList as ChatCompletionMessageParam[],
         settings,
         apiKey,
         (chunk: string) => {
           streamContent += chunk;
-          setCurrentStreamingMessage(sessionId, streamContent);
+          pushContent(streamContent);
         },
         (chunk: string) => {
           reasoningContent += chunk;
-          setCurrentStreamingReasoningMessage(sessionId, reasoningContent);
+          pushReasoning(reasoningContent);
         }
       );
 
@@ -138,9 +151,10 @@ export const ChatInput = () => {
       }
       console.error(error);
     } finally {
-      setLoading(sessionId, false);
-      setCurrentStreamingMessage(sessionId, null);
-      setCurrentStreamingReasoningMessage(sessionId, null);
+      pushContent.cancel();
+      pushReasoning.cancel();
+      useChatStreamingStore.getState().setLoading(sessionId, false);
+      useChatStreamingStore.getState().clearSessionStreaming(sessionId);
     }
   };
 

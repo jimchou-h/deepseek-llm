@@ -2,13 +2,13 @@
 
 import { Message } from '@/types';
 import { useChatStore } from '@/lib/store/chat-store';
+import { useChatStreamingStore } from '@/lib/store/chat-streaming-store';
 import { formatDate } from '@/lib/utils';
 import { Card, Avatar, Spin, Button, Popconfirm, message as antdMessage } from 'antd';
 import { UserOutlined, RobotOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
 import { MessageContent } from './message-content';
-import { MessageContentR1 } from './message-content-r1';
-import { useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import {
   buildMessageListItems,
   messageListItemKey,
@@ -16,7 +16,9 @@ import {
 } from '@/lib/chat/message-list-items';
 import styles from '@/styles/chat/chat-window.module.css';
 
-function MessageBubble({
+const EMPTY_MESSAGES: Message[] = [];
+
+const MessageBubble = memo(function MessageBubble({
   message,
   onDelete,
 }: {
@@ -48,6 +50,7 @@ function MessageBubble({
           ? styles.messageWrapperAssistant
           : styles.messageWrapperUser
       }`}
+      data-message-bubble="1"
     >
       <Card
         size="small"
@@ -91,7 +94,7 @@ function MessageBubble({
             {message.reasoning_content && (
               <div className={styles.messageReasoning}>
                 <div className={styles.messageReasoningTitle}>R1思考过程:</div>
-                <MessageContentR1 content={message.reasoning_content} />
+                <pre className={styles.plainStream}>{message.reasoning_content}</pre>
               </div>
             )}
             <div className={styles.messageTextContent}>
@@ -103,9 +106,9 @@ function MessageBubble({
       </Card>
     </div>
   );
-}
+});
 
-function StreamingBubble({
+const StreamingBubble = memo(function StreamingBubble({
   content,
   reasoning,
 }: {
@@ -113,26 +116,14 @@ function StreamingBubble({
   reasoning: string | null;
 }) {
   return (
-    <div className={`${styles.messageWrapper} ${styles.messageWrapperAssistant}`}>
+    <div
+      className={`${styles.messageWrapper} ${styles.messageWrapperAssistant}`}
+      data-streaming-bubble="1"
+    >
       <Card
         size="small"
         className={`${styles.messageCard} ${styles.messageCardAssistant}`}
         bordered={false}
-        extra={
-          <Button
-            type="text"
-            icon={<CopyOutlined />}
-            size="small"
-            className="text-gray-400 hover:text-blue-500"
-            onClick={() => {
-              let fullContent = '';
-              if (reasoning) fullContent += `思考过程:\n${reasoning}\n\n`;
-              if (content) fullContent += content;
-              navigator.clipboard.writeText(fullContent);
-              antdMessage.success('消息已复制到剪贴板');
-            }}
-          />
-        }
       >
         <div className={styles.messageContent}>
           <Avatar icon={<RobotOutlined />} className="bg-blue-500" />
@@ -140,38 +131,36 @@ function StreamingBubble({
             {reasoning && (
               <div className={styles.messageReasoning}>
                 <div className={styles.messageReasoningTitle}>R1思考中...</div>
-                <MessageContentR1 content={reasoning} />
+                <pre className={styles.plainStream}>{reasoning}</pre>
               </div>
             )}
-            {content && (
-              <div className={styles.messageTextContent}>
-                <MessageContent content={content} />
-              </div>
-            )}
+            {content && <pre className={styles.plainStream}>{content}</pre>}
             <div className={styles.messageTime}>{formatDate(Date.now())}</div>
           </div>
         </div>
       </Card>
     </div>
   );
-}
+});
 
 export const ChatWindow = () => {
   const activeSessionId = useChatStore((state) => state.activeSessionId);
-  const sessions = useChatStore((state) => state.sessions);
+  const messages = useChatStore((state) => {
+    const id = state.activeSessionId;
+    if (!id) return EMPTY_MESSAGES;
+    return state.sessions.find((s) => s.id === id)?.messages ?? EMPTY_MESSAGES;
+  });
   const deleteMessage = useChatStore((state) => state.deleteMessage);
-  const isLoading = useChatStore((state) =>
-    state.isSessionLoading(state.activeSessionId)
-  );
-  const currentStreamingMessage = useChatStore(
-    (state) => state.getSessionStreaming(state.activeSessionId).content
-  );
-  const currentStreamingReasoningMessage = useChatStore(
-    (state) => state.getSessionStreaming(state.activeSessionId).reasoning
-  );
 
-  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
-  const messages = activeSession?.messages ?? [];
+  const isLoading = useChatStreamingStore(
+    (state) => Boolean(activeSessionId && state.loadingBySessionId[activeSessionId])
+  );
+  const currentStreamingMessage = useChatStreamingStore(
+    (state) => state.streamingContentBySessionId[activeSessionId ?? ''] ?? null
+  );
+  const currentStreamingReasoningMessage = useChatStreamingStore(
+    (state) => state.streamingReasoningBySessionId[activeSessionId ?? ''] ?? null
+  );
 
   const items = useMemo(
     () =>
@@ -179,39 +168,47 @@ export const ChatWindow = () => {
         messages,
         streamingContent: currentStreamingMessage,
         streamingReasoning: currentStreamingReasoningMessage,
+        isLoading,
       }),
-    [messages, currentStreamingMessage, currentStreamingReasoningMessage]
+    [messages, currentStreamingMessage, currentStreamingReasoningMessage, isLoading]
   );
 
-  const renderItem = (_index: number, item: MessageListItem) => {
-    if (item.kind === 'streaming') {
+  const onDelete = useCallback(
+    (timestamp: number) => {
+      if (activeSessionId) deleteMessage(activeSessionId, timestamp);
+    },
+    [activeSessionId, deleteMessage]
+  );
+
+  const renderItem = useCallback(
+    (_index: number, item: MessageListItem) => {
+      if (item.kind === 'streaming') {
+        return (
+          <div className={styles.virtuosoItem}>
+            <StreamingBubble content={item.content} reasoning={item.reasoning} />
+          </div>
+        );
+      }
       return (
         <div className={styles.virtuosoItem}>
-          <StreamingBubble content={item.content} reasoning={item.reasoning} />
+          <MessageBubble message={item.message} onDelete={onDelete} />
         </div>
       );
-    }
-    return (
-      <div className={styles.virtuosoItem}>
-        <MessageBubble
-          message={item.message}
-          onDelete={(timestamp) => {
-            if (activeSessionId) deleteMessage(activeSessionId, timestamp);
-          }}
-        />
-      </div>
-    );
-  };
+    },
+    [onDelete]
+  );
 
   return (
     <div className={styles.container}>
       <Virtuoso
         className={styles.messageList}
+        style={{ height: '100%' }}
         data={items}
         computeItemKey={(index, item) => messageListItemKey(item, index)}
         itemContent={renderItem}
-        followOutput="smooth"
-        increaseViewportBy={{ top: 200, bottom: 200 }}
+        followOutput="auto"
+        overscan={200}
+        increaseViewportBy={{ top: 120, bottom: 120 }}
         components={{
           Footer: () =>
             isLoading && !currentStreamingMessage ? (

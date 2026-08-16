@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useChatStore } from './chat-store';
+import { useChatStreamingStore } from './chat-streaming-store';
 import { createEmptySession, DEFAULT_SESSION_TITLE } from '@/lib/chat/session-utils';
 
-function resetStore() {
+function resetStores() {
   const session = createEmptySession();
   useChatStore.setState({
     sessions: [session],
     activeSessionId: session.id,
     contextMessageLimit: 50,
+  });
+  useChatStreamingStore.setState({
     loadingBySessionId: {},
     streamingContentBySessionId: {},
     streamingReasoningBySessionId: {},
@@ -16,7 +19,7 @@ function resetStore() {
 
 describe('useChatStore multi-session', () => {
   beforeEach(() => {
-    resetStore();
+    resetStores();
   });
 
   it('creates a new empty active session', () => {
@@ -73,14 +76,14 @@ describe('useChatStore multi-session', () => {
 
   it('keeps streaming updates on the originating session after switch', () => {
     const a = useChatStore.getState().activeSessionId!;
-    useChatStore.getState().setLoading(a, true);
-    useChatStore.getState().setCurrentStreamingMessage(a, 'hello');
+    useChatStreamingStore.getState().setLoading(a, true);
+    useChatStreamingStore.getState().setStreamingContent(a, 'hello');
     const b = useChatStore.getState().createSession();
     expect(useChatStore.getState().activeSessionId).toBe(b);
-    expect(useChatStore.getState().isSessionLoading(a)).toBe(true);
-    expect(useChatStore.getState().isSessionLoading(b)).toBe(false);
-    expect(useChatStore.getState().getSessionStreaming(a).content).toBe('hello');
-    expect(useChatStore.getState().getSessionStreaming(b).content).toBeNull();
+    expect(useChatStreamingStore.getState().isSessionLoading(a)).toBe(true);
+    expect(useChatStreamingStore.getState().isSessionLoading(b)).toBe(false);
+    expect(useChatStreamingStore.getState().getSessionStreaming(a).content).toBe('hello');
+    expect(useChatStreamingStore.getState().getSessionStreaming(b).content).toBeNull();
   });
 
   it('persists context message limit with a floor of 1', () => {
