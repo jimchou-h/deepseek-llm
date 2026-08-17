@@ -1,24 +1,33 @@
 .menu {
   border-right: none !important;
+  background: transparent !important;
+  color: var(--text);
 }
 
 .menu :global(.ant-menu-item) {
   margin: 4px 8px !important;
-  border-radius: 6px;
+  border-radius: 8px;
+  color: var(--dim) !important;
 }
 
 .menu :global(.ant-menu-item-selected) {
-  background-color: #e6f4ff !important;
+  background: color-mix(in srgb, var(--signal) 16%, transparent) !important;
+  color: var(--signal) !important;
 }
 
 .menu :global(.ant-menu-item:hover) {
-  background-color: #f5f5f5 !important;
+  background: color-mix(in srgb, var(--signal) 8%, transparent) !important;
+  color: var(--text) !important;
 }
 
 .menu :global(.ant-menu-item-active) {
-  background-color: #f5f5f5 !important;
+  background: color-mix(in srgb, var(--signal) 8%, transparent) !important;
 }
 
 .menu :global(.ant-menu-item a) {
   color: inherit;
-} 
+}
+
+.menu :global(.ant-menu-item-icon) {
+  color: inherit;
+}

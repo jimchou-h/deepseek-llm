@@ -137,7 +137,7 @@ export function SettingsPanel() {
         </Form.Item>
       </Form>
 
-      <div className="mt-4 text-gray-500">
+      <div className="mt-4 muted">
         <h3 className="font-bold mb-2">模型说明</h3>
         <ul className="list-disc list-inside space-y-2">
           <li>

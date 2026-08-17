@@ -1,11 +1,19 @@
 .container {
-  @apply px-4 py-2 border-b flex justify-between items-center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text);
 }
 
 .title {
-  @apply text-xl font-bold;
+  font-family: var(--font-display), 'Chakra Petch', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .actions {
-  @apply space-x-2;
-} 
+  display: flex;
+  gap: 0.5rem;
+}

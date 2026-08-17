@@ -9,8 +9,8 @@ export default function WorkflowsPage() {
     <div className={styles.pageContainer}>
       <div className={styles.pageContent}>
         <div className={styles.pageHeader}>
-          <h1 className="text-2xl font-bold">Coze 工作流</h1>
-          <p className="text-gray-500 mt-2">
+          <h1>Coze 工作流</h1>
+          <p className={styles.muted}>
             配置和管理 Coze 工作流插件
           </p>
         </div>

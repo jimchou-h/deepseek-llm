@@ -54,7 +54,7 @@ export function ApiSettings() {
         </Form.Item>
       </Form>
 
-      <div className="mt-4 text-gray-500">
+      <div className="mt-4 muted">
         <h3 className="font-bold mb-2">如何获取 API Key？</h3>
         <ol className="list-decimal list-inside space-y-2">
           <li>访问 DeepSeek 开发者平台</li>

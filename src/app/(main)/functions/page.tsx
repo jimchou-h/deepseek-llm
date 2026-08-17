@@ -9,8 +9,8 @@ export default function FunctionsPage() {
     <div className={styles.pageContainer}>
       <div className={styles.pageContent}>
         <div className={styles.pageHeader}>
-          <h1 className="text-2xl font-bold">函数配置</h1>
-          <p className="text-gray-500 mt-2">
+          <h1>函数配置</h1>
+          <p className={styles.muted}>
             配置和管理可供 AI 调用的外部函数
           </p>
         </div>

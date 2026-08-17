@@ -150,10 +150,10 @@ export function FunctionSettings() {
                 
               ]}
             >
-              <p className="text-gray-500">{func.description}</p>
+              <p className="muted">{func.description}</p>
               <div className="mt-2">
                 <strong>URL:</strong>
-                <div className="mt-1 break-all text-gray-600 text-sm">
+                <div className="mt-1 break-all muted text-sm">
                   {func.url}
                 </div>
               </div>

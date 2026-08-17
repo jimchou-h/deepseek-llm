@@ -48,7 +48,7 @@ export default function TemplatesPage() {
     <div className={styles.pageContainer}>
       <div className={styles.pageContent}>
         <div className={styles.pageHeader}>
-          <h1 className="text-2xl font-bold">提示词模板</h1>
+          <h1>提示词模板</h1>
         </div>
         <div className={styles.pageBody}>
           <div className="mb-4 flex justify-between items-center">
@@ -96,7 +96,7 @@ export default function TemplatesPage() {
                     title={template.category}
                     description={template.description}
                   />
-                  <div className="mt-2 truncate text-gray-500">
+                  <div className="mt-2 truncate muted">
                     {template.prompt}
                   </div>
                 </Card>

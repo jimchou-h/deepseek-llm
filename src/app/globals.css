@@ -3,19 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: var(--ink, #08131F);
+  --foreground: var(--text, #DCE8F5);
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text, #dce8f5);
+  background: var(--ink, #08131f);
+  font-family: var(--font-body), 'Noto Sans SC', sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--signal, #3ba7ff) 38%, transparent);
+  color: var(--text, #dce8f5);
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal, #3ba7ff);
+  outline-offset: 2px;
+}
+
+.muted {
+  color: var(--dim, #7a93ab);
 }

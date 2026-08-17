@@ -1,5 +1,6 @@
 .container {
   @apply max-w-xl;
+  color: var(--text);
 }
 
 .formActions {
@@ -7,13 +8,20 @@
 }
 
 .modelInfo {
-  @apply mt-4 text-gray-500;
+  margin-top: 1rem;
+  color: var(--dim);
 }
 
 .modelInfoTitle {
   @apply font-bold mb-2;
+  color: var(--text);
 }
 
 .modelInfoList {
   @apply list-disc list-inside space-y-2;
-} 
+}
+
+.category {
+  color: var(--dim);
+  font-size: 12px;
+}

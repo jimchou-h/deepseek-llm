@@ -1,15 +1,50 @@
-.container {
-  @apply min-h-screen;
+.shell {
+  height: 100vh;
+  background: var(--ink);
 }
 
 .sider {
-  @apply border-r;
+  border-right: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+}
+
+.sider :global(.ant-layout-sider-children) {
+  background: var(--panel);
+}
+
+.siderInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.brand {
+  padding: 18px 16px 16px;
+  border-bottom: 1px solid var(--line);
 }
 
 .logo {
-  @apply p-4 text-xl font-bold border-b;
+  margin: 0;
+  font-family: var(--font-display), 'Chakra Petch', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.main {
+  background: var(--ink);
 }
 
 .content {
-  @apply p-6;
-} 
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+}

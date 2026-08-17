@@ -33,7 +33,7 @@ export default function SettingsPage() {
     <div className={styles.pageContainer}>
       <div className={styles.pageContent}>
         <div className={styles.pageHeader}>
-          <h1 className="text-2xl font-bold">设置</h1>
+          <h1>设置</h1>
         </div>
         <div className={styles.pageBody}>
           <Card bordered={false}>

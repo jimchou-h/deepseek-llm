@@ -1,8 +1,10 @@
 export type RafThrottle = ((value: string) => void) & { cancel: () => void };
 
+type FrameCallback = (time: number) => void;
+
 export function createRafThrottle(
   update: (value: string) => void,
-  raf: (cb: FrameRequestCallback) => number = requestAnimationFrame,
+  raf: (cb: FrameCallback) => number = requestAnimationFrame,
   caf: (id: number) => void = cancelAnimationFrame
 ): RafThrottle {
   let pending: string | null = null;

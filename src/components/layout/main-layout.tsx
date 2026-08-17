@@ -2,8 +2,8 @@
 
 import { Layout } from 'antd';
 import { NavMenu } from './nav-menu';
-import { PageBreadcrumb } from './breadcrumb';
 import { BalanceDisplay } from './balance-display';
+import styles from '@/styles/layout/main-layout.module.css';
 
 const { Sider, Content } = Layout;
 
@@ -13,27 +13,21 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Layout className="h-screen">
-      <Sider 
-        theme="light" 
-        className="border-r fixed h-full" 
-        width={220}
-      >
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b">
-            <h1 className="text-xl font-bold">DeepSeek</h1>
+    <Layout className={styles.shell}>
+      <Sider theme="dark" className={styles.sider} width={220}>
+        <div className={styles.siderInner}>
+          <div className={styles.brand}>
+            <h1 className={styles.logo}>DeepSeek</h1>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className={styles.nav}>
             <NavMenu />
             <BalanceDisplay />
           </div>
         </div>
       </Sider>
-      <Layout >
-        <Content className="h-full overflow-hidden">
-          {children}
-        </Content>
+      <Layout className={styles.main}>
+        <Content className={styles.content}>{children}</Content>
       </Layout>
     </Layout>
   );
-} 
+}
