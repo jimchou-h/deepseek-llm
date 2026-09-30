@@ -3,15 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSettingsStore } from '@/lib/store/settings-store';
-
-const routes = ['/chat', '/templates', '/settings', '/workflows', '/functions'] as const;
-type ValidRoute = typeof routes[number];
-
-function isValidRoute(path: string): path is ValidRoute {
-  return routes.some(route => path.startsWith(route));
-}
-
-const PUBLIC_PATHS = ['/settings', '/functions', '/workflows'];
+import { isAppRoute, PUBLIC_PATHS } from '@/config/app-routes';
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -32,12 +24,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!isValidRoute(pathname)) {
+    if (!isAppRoute(pathname)) {
       router.replace('/chat');
       return;
     }
 
-    if (!apiKey && !PUBLIC_PATHS.includes(pathname)) {
+    if (!apiKey && !(PUBLIC_PATHS as readonly string[]).includes(pathname)) {
       router.push('/settings');
     }
   }, [pathname, router, apiKey, isStoreLoaded]);
@@ -47,4 +39,4 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-} 
+}
