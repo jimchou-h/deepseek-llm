@@ -1,19 +1,149 @@
 import { Settings } from '@/types';
 import { API_CONFIG } from './config';
-import { executeFunctionCall } from './function-handler';
-import { processRequestBody } from '@/lib/utils/function-utils';
-// import OpenAI from 'openai';
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { appendSseText } from '@/lib/chat/sse-parse';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
-// 验证消息序列是否合法
+const CHAT_COMPLETIONS_URL = 'https://api.deepseek.com/chat/completions';
+
+export type ChatCompletionStatus = 'completed' | 'aborted' | 'incomplete';
+
+export type ChatCompletionResult = {
+  content: string;
+  reasoningContent: string;
+  status: ChatCompletionStatus;
+};
+
+export type ChatCompletionHandlers = {
+  onStream?: (delta: string) => void;
+  onStreamReasoning?: (delta: string) => void;
+  signal?: AbortSignal;
+};
+
 function validateMessages(messages: ChatCompletionMessageParam[], model: string) {
   if (model === 'deepseek-reasoner') {
     for (let i = 1; i < messages.length; i++) {
       if (messages[i].role === messages[i - 1].role) {
-        throw new Error('使用 deepseek-reasoner 模型时，消息序列中的用户和助手消息必须交替出现');
+        throw new Error(
+          '使用 deepseek-reasoner 模型时，消息序列中的用户和助手消息必须交替出现'
+        );
       }
     }
   }
+}
+
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const name = (error as { name?: string }).name;
+  return name === 'AbortError';
+}
+
+type DeltaSink = {
+  content: string;
+  reasoningContent: string;
+  sawDone: boolean;
+};
+
+/**
+ * 从 ReadableStream 读 SSE：stream decode → buffer 拼事件 → JSON delta。
+ * 返回时带上完成语义（completed / aborted / incomplete）。
+ */
+async function readChatSseStream(
+  body: ReadableStream<Uint8Array>,
+  handlers: ChatCompletionHandlers,
+  initial?: { content?: string; reasoningContent?: string }
+): Promise<DeltaSink & { status: ChatCompletionStatus }> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let content = initial?.content ?? '';
+  let reasoningContent = initial?.reasoningContent ?? '';
+  let sawDone = false;
+
+  try {
+    while (true) {
+      if (handlers.signal?.aborted) {
+        return { content, reasoningContent, sawDone, status: 'aborted' };
+      }
+
+      const { done, value } = await reader.read();
+      if (done) {
+        // 连接结束时若最后一帧缺空行，补一次边界以免丢最后一条 data
+        if (buffer.trim()) {
+          const flushed = appendSseText(buffer, '\n\n');
+          buffer = flushed.buffer;
+          if (flushed.sawDone) sawDone = true;
+          for (const payload of flushed.dataPayloads) {
+            try {
+              const json = JSON.parse(payload) as {
+                choices?: Array<{
+                  delta?: { content?: string; reasoning_content?: string };
+                }>;
+              };
+              const delta = json.choices?.[0]?.delta;
+              if (delta?.content) {
+                content += delta.content;
+                handlers.onStream?.(delta.content);
+              }
+              if (delta?.reasoning_content) {
+                reasoningContent += delta.reasoning_content;
+                handlers.onStreamReasoning?.(delta.reasoning_content);
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+        break;
+      }
+
+      // stream:true 保留跨 chunk 的半个多字节字符，避免中文乱码
+      const text = decoder.decode(value, { stream: true });
+      const parsed = appendSseText(buffer, text);
+      buffer = parsed.buffer;
+      if (parsed.sawDone) sawDone = true;
+
+      for (const payload of parsed.dataPayloads) {
+        try {
+          const json = JSON.parse(payload) as {
+            choices?: Array<{
+              delta?: { content?: string; reasoning_content?: string };
+            }>;
+          };
+          const delta = json.choices?.[0]?.delta;
+          if (delta?.content) {
+            content += delta.content;
+            handlers.onStream?.(delta.content);
+          }
+          if (delta?.reasoning_content) {
+            reasoningContent += delta.reasoning_content;
+            handlers.onStreamReasoning?.(delta.reasoning_content);
+          }
+        } catch {
+          // 忽略单条坏 JSON，继续读后续事件
+        }
+      }
+    }
+  } catch (error) {
+    if (isAbortError(error) || handlers.signal?.aborted) {
+      return { content, reasoningContent, sawDone, status: 'aborted' };
+    }
+    throw error;
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // ignore
+    }
+  }
+
+  if (handlers.signal?.aborted) {
+    return { content, reasoningContent, sawDone, status: 'aborted' };
+  }
+  if (sawDone) {
+    return { content, reasoningContent, sawDone, status: 'completed' };
+  }
+  // 连接结束但从未见到 [DONE]：当作异常断流
+  return { content, reasoningContent, sawDone, status: 'incomplete' };
 }
 
 export async function chatCompletion(
@@ -22,255 +152,73 @@ export async function chatCompletion(
   apiKey: string,
   onStream?: (content: string) => void,
   onStreamReasoning?: (content: string) => void,
-) {
-  // const openai = new OpenAI({
-  //   baseURL: 'https://api.deepseek.com',
-  //   apiKey: apiKey,
-  //   dangerouslyAllowBrowser: true
-  // });
+  signal?: AbortSignal
+): Promise<ChatCompletionResult> {
+  const handlers: ChatCompletionHandlers = { onStream, onStreamReasoning, signal };
+  const modelName = API_CONFIG.MODELS.chat;
+  validateMessages(messages, modelName);
 
+  if (!apiKey || apiKey.length < 30) {
+    throw new Error('请先在设置页面配置您的 DeepSeek API Key');
+  }
+
+  let response: Response;
   try {
-    const modelName: string = API_CONFIG.MODELS['chat'];
-    // 验证消息序列
-    validateMessages(messages, modelName);
-
-    // 只在非 deepseek-reasoner 模型时启用函数调用
-    const tools = modelName !== 'deepseek-reasoner' ? settings.functions?.map(func => ({
-      type: 'function' as const,
-      function: {
-        name: func.name,
-        description: func.description,
-        parameters: func.parameters,
-      },
-    })) : undefined;
-
-    if (!apiKey || apiKey.length < 30) {
-      throw new Error('请先在设置页面配置您的 DeepSeek API Key');
-    }
-
-    const response = await fetch(`${'https://api.deepseek.com'}/chat/completions`, {
+    response = await fetch(CHAT_COMPLETIONS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'text/event-stream',
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'text/event-stream',
       },
       body: JSON.stringify({
-        model: API_CONFIG.MODELS['chat'],
+        model: modelName,
         messages: messages.map(({ role, content }) => ({ role, content })),
         temperature: settings.temperature,
-        // ...(tools && tools.length > 0 ? { tools } : {}),
+        // tools 暂未启用：请求体不带 tools，避免半残函数调用路径
         stream: true,
       }),
+      signal,
     });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => null);
-      const errorMessage = errorBody?.toLowerCase() || response.statusText.toLowerCase();
-
-      if (errorMessage.includes('authentication') ||
-        errorMessage.includes('apikey') ||
-        errorMessage.includes('api key') ||
-        errorMessage.includes('access token') ||
-        errorMessage.includes('unauthorized')) {
-        throw new Error('API Key 无效，请检查您的 API Key 设置');
-      }
-
-      throw new Error(
-        `API 请求失败 (${response.status}): ${response.statusText}\n${errorBody ? `详细信息: ${errorBody}` : ''}`
-      );
-    }
-
-    if (!response.body) {
-      throw new Error('响应体为空');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let fullContent = '';
-    let fullReasoningContent = '';
-    let currentToolCall: {
-      id?: string;
-      function?: {
-        name?: string;
-        arguments?: string;
-      };
-    } = {};
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        buffer += chunk;
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.trim() || line.startsWith(':')) continue;
-
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-
-              if (parsed.choices?.[0]?.delta?.content) {
-                const content = parsed.choices[0].delta.content;
-                fullContent += content;
-                onStream?.(content);
-              }
-              if (parsed.choices?.[0]?.delta?.reasoning_content) {
-                const content = parsed.choices[0].delta.reasoning_content;
-                fullReasoningContent += content;
-                onStreamReasoning?.(content);
-              }
-
-              if (parsed.choices?.[0]?.delta?.tool_calls?.[0]) {
-                const toolCallDelta = parsed.choices[0].delta.tool_calls[0];
-
-                if (toolCallDelta.id) {
-                  currentToolCall.id = toolCallDelta.id;
-                }
-                if (toolCallDelta.function?.name) {
-                  if (!currentToolCall.function) currentToolCall.function = {};
-                  currentToolCall.function.name = toolCallDelta.function.name;
-                }
-                if (toolCallDelta.function?.arguments) {
-                  if (!currentToolCall.function) currentToolCall.function = {};
-                  currentToolCall.function.arguments = (currentToolCall.function.arguments || '') +
-                    toolCallDelta.function.arguments;
-                }
-
-                if (currentToolCall.id &&
-                  currentToolCall.function?.name &&
-                  typeof currentToolCall.function.arguments === 'string') {
-
-                  const functionDef = settings.functions?.find(
-                    f => f.name === currentToolCall.function?.name
-                  );
-
-                  if (!functionDef) {
-                    throw new Error(`未找到函数定义: ${currentToolCall.function?.name}`);
-                  }
-
-                  try {
-                    const functionArgs = JSON.parse(currentToolCall.function.arguments);
-                    // 处理函数参数，保持对象结构
-                    const processedArgs = processRequestBody(functionArgs, functionDef.parameters);
-                    const result = await executeFunctionCall(functionDef, processedArgs);
-
-                    const secondResponse = await fetch(`${'https://api.deepseek.com'}/chat/completions`, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Accept': 'text/event-stream',
-                      },
-                      body: JSON.stringify({
-                        model: API_CONFIG.MODELS['chat'],
-                        messages: [
-                          ...messages,
-                          {
-                            role: 'assistant',
-                            content: fullContent,
-                            // reasoning_content: fullReasoningContent,
-                            tool_calls: [{
-                              id: currentToolCall.id!,
-                              type: 'function',
-                              function: {
-                                name: currentToolCall.function!.name!,
-                                arguments: JSON.stringify(processedArgs, null, 2)
-                              }
-                            }]
-                          },
-                          {
-                            role: 'tool',
-                            tool_call_id: currentToolCall.id,
-                            content: JSON.stringify(result, null, 2),
-                          },
-                        ],
-                        temperature: settings.temperature,
-                        stream: true,
-                      }),
-                    });
-
-                    if (!secondResponse.ok) {
-                      throw new Error(`API 请求失败: ${secondResponse.statusText}`);
-                    }
-
-                    currentToolCall = {};
-
-                    const secondReader = secondResponse.body?.getReader();
-                    if (secondReader) {
-                      let secondBuffer = '';
-                      while (true) {
-                        const { done, value } = await secondReader.read();
-                        if (done) break;
-
-                        const secondChunk = decoder.decode(value, { stream: true });
-                        secondBuffer += secondChunk;
-
-                        const secondLines = secondBuffer.split('\n');
-                        secondBuffer = secondLines.pop() || '';
-
-                        for (const secondLine of secondLines) {
-                          if (!secondLine.trim() || secondLine.startsWith(':')) continue;
-
-                          if (secondLine.startsWith('data: ')) {
-                            const secondData = secondLine.slice(6).trim();
-                            if (secondData === '[DONE]') continue;
-
-                            try {
-                              const secondParsed = JSON.parse(secondData);
-                              if (secondParsed.choices?.[0]?.delta?.content) {
-                                const content = secondParsed.choices[0].delta.content;
-                                fullContent += content;
-                                onStream?.(content);
-                              }
-                              if (secondParsed.choices?.[0]?.delta?.reasoning_content) {
-                                const content = secondParsed.choices[0].delta.reasoning_content;
-                                fullReasoningContent += content;
-                                onStreamReasoning?.(content);
-                              }
-                            } catch (e) {
-                              console.error('解析第二次响应数据失败:', e);
-                            }
-                          }
-                        }
-                      }
-                      secondReader.releaseLock();
-                    }
-                  } catch (e) {
-                    console.error('执行函数调用失败:', e);
-                  }
-                }
-              }
-            } catch (e) {
-              console.error('解析响应数据失败:', e);
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    return {
-      content: fullContent,
-      reasoningContent: fullReasoningContent,
-    };
   } catch (error) {
-    console.error('API 调用错误:', error);
+    if (isAbortError(error) || signal?.aborted) {
+      return { content: '', reasoningContent: '', status: 'aborted' };
+    }
     throw error;
   }
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => null);
+    const errorMessage = errorBody?.toLowerCase() || response.statusText.toLowerCase();
+
+    if (
+      errorMessage.includes('authentication') ||
+      errorMessage.includes('apikey') ||
+      errorMessage.includes('api key') ||
+      errorMessage.includes('access token') ||
+      errorMessage.includes('unauthorized')
+    ) {
+      throw new Error('API Key 无效，请检查您的 API Key 设置');
+    }
+
+    throw new Error(
+      `API 请求失败 (${response.status}): ${response.statusText}\n${
+        errorBody ? `详细信息: ${errorBody}` : ''
+      }`
+    );
+  }
+
+  if (!response.body) {
+    throw new Error('响应体为空');
+  }
+
+  const result = await readChatSseStream(response.body, handlers);
+  return {
+    content: result.content,
+    reasoningContent: result.reasoningContent,
+    status: result.status,
+  };
 }
-
-
 
 export interface BalanceInfo {
   currency: 'CNY' | 'USD';
@@ -288,12 +236,10 @@ export async function getBalance(apiKey: string): Promise<BalanceResponse> {
   if (!apiKey) {
     throw new Error('请先设置 API Key');
   }
-  console.log(1)
-  console.log(API_CONFIG)
-  const response = await fetch(`${'https://api.deepseek.com'}/user/balance`, {
+  const response = await fetch('https://api.deepseek.com/user/balance', {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
   });
 
@@ -302,4 +248,4 @@ export async function getBalance(apiKey: string): Promise<BalanceResponse> {
   }
 
   return response.json();
-} 
+}

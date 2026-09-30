@@ -1,28 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { Input, Button, message, Tooltip, Modal, Upload } from 'antd';
-import { SendOutlined, DeleteOutlined, DownloadOutlined, PaperClipOutlined } from '@ant-design/icons';
+import { useRef, useState } from 'react';
+import { Input, Button, message, Tooltip, Modal } from 'antd';
+import {
+  SendOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useChatStreamingStore } from '@/lib/store/chat-streaming-store';
 import { useSettingsStore } from '@/lib/store/settings-store';
 import { chatCompletion } from '@/lib/api/deepseek';
-import { openUploadFile } from '@/lib/api/deepseekopenapi';
 import { useChatShortcuts } from '@/hooks/use-chat-shortcuts';
 import { buildApiMessages } from '@/lib/chat/context-window';
 import { createRafThrottle } from '@/lib/chat/raf-throttle';
+import {
+  abortSessionRun,
+  clearSessionRunIf,
+  isCurrentRun,
+  startSessionRun,
+} from '@/lib/chat/session-run';
 import styles from '@/styles/chat/chat-input.module.css';
 import { TemplateSelector } from './template-selector';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
-import type { UploadFile } from 'antd/es/upload/interface';
 import type { Message } from '@/types';
 
 const EMPTY_MESSAGES: Message[] = [];
 
 export const ChatInput = () => {
   const [input, setInput] = useState('');
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [uploadedFileIds, setUploadedFileIds] = useState<string[]>([]);
+  /** 累积正文，停止时可对照（主落盘仍用 response.content） */
+  const partialRef = useRef({ content: '', reasoning: '' });
 
   const activeSessionId = useChatStore((s) => s.activeSessionId);
   const messages = useChatStore((s) => {
@@ -39,42 +48,21 @@ export const ChatInput = () => {
 
   const { settings, apiKey, updateSettings } = useSettingsStore();
 
-  const handleFileUpload = async (file: File) => {
-    if (!apiKey) {
-      message.error('请先设置 API Key');
-      return Upload.LIST_IGNORE;
-    }
-
-    const isLt10M = file.size / 1024 / 1024 < 10;
-    if (!isLt10M) {
-      message.error('文件必须小于10MB！');
-      return Upload.LIST_IGNORE;
-    }
-
-    try {
-      const result = await openUploadFile(file, apiKey);
-      if (result.code === 0) {
-        setUploadedFileIds((prev) => [...prev, result.data.biz_data.id]);
-        message.success(`文件 "${file.name}" 上传成功`);
-        return true;
-      }
-      message.error(result.msg || '文件上传失败');
-      return Upload.LIST_IGNORE;
-    } catch (error) {
-      if (error instanceof Error) {
-        message.error(error.message);
-      } else {
-        message.error('文件上传失败');
-      }
-      return Upload.LIST_IGNORE;
-    }
+  const persistAssistantIfNeeded = (
+    sessionId: string,
+    content: string,
+    reasoning: string
+  ) => {
+    if (!content.trim() && !reasoning.trim()) return;
+    addMessage(sessionId, {
+      role: 'assistant',
+      content,
+      timestamp: Date.now(),
+      reasoning_content: reasoning,
+    });
   };
 
-  const handleFileRemove = (file: UploadFile) => {
-    setFileList((prev) => prev.filter((f) => f.uid !== file.uid));
-  };
-
-  const sendMessage = async (content: string, reasoning_content?: string) => {
+  const sendMessage = async (content: string) => {
     if (!apiKey) {
       message.error('请先设置 API Key');
       return;
@@ -86,6 +74,8 @@ export const ChatInput = () => {
       return;
     }
 
+    // 同会话新 run 会 abort 旧 controller；旧 finally 靠 runId 校验不清理新任务
+    const run = startSessionRun(sessionId);
     const streaming = useChatStreamingStore.getState();
     const sessionMessages =
       useChatStore.getState().sessions.find((s) => s.id === sessionId)?.messages ?? [];
@@ -94,15 +84,18 @@ export const ChatInput = () => {
       role: 'user' as const,
       content: content.trim(),
       timestamp: Date.now(),
-      reasoning_content: reasoning_content ? reasoning_content.trim() : '',
     };
 
     const pushContent = createRafThrottle((value) => {
+      if (!isCurrentRun(sessionId, run.runId)) return;
       useChatStreamingStore.getState().setStreamingContent(sessionId, value);
     });
     const pushReasoning = createRafThrottle((value) => {
+      if (!isCurrentRun(sessionId, run.runId)) return;
       useChatStreamingStore.getState().setStreamingReasoning(sessionId, value);
     });
+
+    partialRef.current = { content: '', reasoning: '' };
 
     try {
       addMessage(sessionId, userMessage);
@@ -125,25 +118,40 @@ export const ChatInput = () => {
         settings,
         apiKey,
         (chunk: string) => {
+          if (!isCurrentRun(sessionId, run.runId)) return;
           streamContent += chunk;
+          partialRef.current.content = streamContent;
           pushContent(streamContent);
         },
         (chunk: string) => {
+          if (!isCurrentRun(sessionId, run.runId)) return;
           reasoningContent += chunk;
+          partialRef.current.reasoning = reasoningContent;
           pushReasoning(reasoningContent);
-        }
+        },
+        run.controller.signal
       );
 
-      addMessage(sessionId, {
-        role: 'assistant',
-        content: response.content,
-        timestamp: Date.now(),
-        reasoning_content: response.reasoningContent,
-      });
+      if (!isCurrentRun(sessionId, run.runId)) {
+        return;
+      }
 
-      setFileList([]);
-      setUploadedFileIds([]);
+      if (response.status === 'aborted') {
+        persistAssistantIfNeeded(sessionId, response.content, response.reasoningContent);
+        return;
+      }
+
+      if (response.status === 'incomplete') {
+        persistAssistantIfNeeded(sessionId, response.content, response.reasoningContent);
+        message.warning('连接中断，已保存已接收的部分回复');
+        return;
+      }
+
+      persistAssistantIfNeeded(sessionId, response.content, response.reasoningContent);
     } catch (error) {
+      if (!isCurrentRun(sessionId, run.runId)) {
+        return;
+      }
       if (error instanceof Error) {
         message.error(error.message);
       } else {
@@ -153,16 +161,27 @@ export const ChatInput = () => {
     } finally {
       pushContent.cancel();
       pushReasoning.cancel();
-      useChatStreamingStore.getState().setLoading(sessionId, false);
-      useChatStreamingStore.getState().clearSessionStreaming(sessionId);
+      // 代际校验：旧 run 不得清掉新 run 的 loading / streaming
+      if (isCurrentRun(sessionId, run.runId)) {
+        useChatStreamingStore.getState().setLoading(sessionId, false);
+        useChatStreamingStore.getState().clearSessionStreaming(sessionId);
+        clearSessionRunIf(sessionId, run.runId);
+      }
     }
+  };
+
+  /** 停止接收：只 abort 浏览器读流，不保证上游模型立刻停 */
+  const handleStop = () => {
+    if (!activeSessionId) return;
+    abortSessionRun(activeSessionId);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isLoading) return;
-    await sendMessage(input);
+    const text = input;
     setInput('');
+    await sendMessage(text);
   };
 
   useChatShortcuts({
@@ -246,43 +265,35 @@ export const ChatInput = () => {
           <Input.TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              fileList.length > 0
-                ? '请输入关于文件的问题...'
-                : '输入消息... (Ctrl + Enter 发送)'
-            }
+            placeholder="输入消息... (Ctrl + Enter 发送)"
             autoSize={{ minRows: 1, maxRows: 4 }}
             className={styles.textarea}
+            disabled={isLoading}
           />
-          <Tooltip title="发送 (Ctrl + Enter)">
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={() => handleSubmit()}
-              loading={isLoading}
-              className={styles.sendButton}
-            >
-              发送
-            </Button>
-          </Tooltip>
+          {isLoading ? (
+            <Tooltip title="停止接收（上游模型可能仍继续生成）">
+              <Button
+                danger
+                icon={<StopOutlined />}
+                onClick={handleStop}
+                className={styles.sendButton}
+              >
+                停止
+              </Button>
+            </Tooltip>
+          ) : (
+            <Tooltip title="发送 (Ctrl + Enter)">
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                onClick={() => handleSubmit()}
+                className={styles.sendButton}
+              >
+                发送
+              </Button>
+            </Tooltip>
+          )}
         </div>
-        {fileList.length > 0 && (
-          <div className={styles.fileList}>
-            {fileList.map((file) => (
-              <div key={file.uid} className={styles.fileItem}>
-                <PaperClipOutlined /> {file.name}
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  onClick={() => handleFileRemove(file)}
-                >
-                  移除
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
       </form>
     </div>
   );

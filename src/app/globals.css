@@ -5,12 +5,16 @@
 :root {
   --background: var(--ink, #08131F);
   --foreground: var(--text, #DCE8F5);
+  /* 本地不拉 Google Fonts；有系统/用户已装字体则优先用 */
+  --font-display: 'Chakra Petch', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Cascadia Code', 'Consolas', 'Sarasa Mono SC', monospace;
 }
 
 body {
   color: var(--text, #dce8f5);
   background: var(--ink, #08131f);
-  font-family: var(--font-body), 'Noto Sans SC', sans-serif;
+  font-family: var(--font-body);
 }
 
 ::selection {

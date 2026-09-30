@@ -1,31 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { Chakra_Petch, IBM_Plex_Mono, Noto_Sans_SC } from 'next/font/google';
 import './globals.css';
 import '@/styles/antd-overrides.css';
 import { AppProviders } from '@/components/layout/app-providers';
 import { inkConsoleCssVars } from '@/lib/theme/deepseek';
-
-const display = Chakra_Petch({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-  variable: '--font-display',
-  display: 'swap',
-});
-
-const body = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-body',
-  display: 'swap',
-});
-
-const mono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'DeepSeek WebUI',
@@ -34,14 +12,19 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
+/**
+ * 不使用 next/font/google：本地若无法访问 Google Fonts，
+ * Next 会在拉取字体重试时卡住/刷 AbortError，导致页面打不开。
+ * 字体栈在 globals.css 的 --font-* 变量中定义。
+ */
 export default function RootLayout({
   children,
 }: {
   children: ReactNode;
 }) {
   return (
-    <html lang="zh" className={`${display.variable} ${body.variable} ${mono.variable}`}>
-      <body className={body.className} style={inkConsoleCssVars() as CSSProperties}>
+    <html lang="zh">
+      <body style={inkConsoleCssVars() as CSSProperties}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
