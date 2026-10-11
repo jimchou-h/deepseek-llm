@@ -11,7 +11,7 @@
   flex: 1;
   height: 100% !important;
   /* 左右留白放在 .virtuosoItem 上：Virtuoso 按 scroller 全宽量列表宽度，横向 padding 会撑出溢出 */
-  padding: 20px 0 12px;
+  padding: 28px 0 12px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--signal) 28%, transparent) transparent;
 }
@@ -22,7 +22,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 22px 12px;
+  padding: 28px 22px 12px;
 }
 
 .skeletonRow {
