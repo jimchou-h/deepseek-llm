@@ -10,8 +10,9 @@
 .messageList {
   flex: 1;
   height: 100% !important;
-  /* 左右留白放在 .virtuosoItem 上：Virtuoso 按 scroller 全宽量列表宽度，横向 padding 会撑出溢出 */
-  padding: 28px 0 12px;
+  /* 左右留白放在 .virtuosoItem 上：Virtuoso 按 scroller 全宽量列表宽度，横向 padding 会撑出溢出；
+     顶部留白走 components.Header：item 是 sticky 定位，scroller 的 padding-top 对它无效 */
+  padding: 0 0 12px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--signal) 28%, transparent) transparent;
 }

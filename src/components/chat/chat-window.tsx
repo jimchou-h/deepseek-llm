@@ -225,6 +225,7 @@ export const ChatWindow = () => {
         overscan={200}
         increaseViewportBy={{ top: 120, bottom: 120 }}
         components={{
+          Header: () => <div style={{ height: 28 }} />,
           Footer: () =>
             isLoading && !currentStreamingMessage ? (
               <div className={styles.loadingWrapper}>
