@@ -66,7 +66,7 @@ resolveSessionModel(sessionModel: ModelType | undefined, globalModel: ModelType)
 
 ### 2.4 API 层
 
-`chatCompletion(messages, settings, apiKey, onStream?, onStreamReasoning?, signal?, model)` — 参数追加 `model: ModelType`；请求体 `model: API_CONFIG.MODELS[model]`、`max_tokens: 8192`。删除 reasoner 专用校验分支（v4 两档均无"消息交替"限制）。`deepseekopenapi.ts` 中 `MODELS['chat']` 两处替换为 `MODELS.pro`（该文件为函数/工作流旧路径，最小修复不做重构）。
+`chatCompletion(messages, settings, apiKey, onStream?, onStreamReasoning?, signal?, model?)` — 参数追加可选 `model: ModelType`（缺省回落 `settings.model`）；请求体 `model: API_CONFIG.MODELS[生效档位]`、`max_tokens: 8192`。删除 reasoner 专用校验分支（v4 两档均无"消息交替"限制）。`deepseekopenapi.ts` 中 `MODELS['chat']` 引用改为按 `settings.model` 取档（该文件为函数/工作流旧路径，最小修复不做重构）。
 
 ## 3. 省 token
 

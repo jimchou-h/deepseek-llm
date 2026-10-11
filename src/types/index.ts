@@ -1,3 +1,4 @@
+import type { ModelType } from '@/lib/api/config';
 
 export interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -28,7 +29,7 @@ export interface FunctionDefinition {
 }
 
 export interface Settings {
-  model: string;
+  model: ModelType;
   temperature: number;
   systemPrompt: string;
   functions: FunctionDefinition[];
@@ -40,6 +41,6 @@ export interface ChatSettings {
   topK: number;
   maxLength: number;
   systemPrompt: string;
-  model: 'chat' | 'coder';
+  model: ModelType;
   functions: FunctionDefinition[];
 } 

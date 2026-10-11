@@ -1,5 +1,5 @@
 import { Settings } from '@/types';
-import { API_CONFIG } from './config';
+import { API_CONFIG, type ModelType } from './config';
 import { appendSseText } from '@/lib/chat/sse-parse';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
@@ -18,18 +18,6 @@ export type ChatCompletionHandlers = {
   onStreamReasoning?: (delta: string) => void;
   signal?: AbortSignal;
 };
-
-function validateMessages(messages: ChatCompletionMessageParam[], model: string) {
-  if (model === 'deepseek-reasoner') {
-    for (let i = 1; i < messages.length; i++) {
-      if (messages[i].role === messages[i - 1].role) {
-        throw new Error(
-          '使用 deepseek-reasoner 模型时，消息序列中的用户和助手消息必须交替出现'
-        );
-      }
-    }
-  }
-}
 
 function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -152,11 +140,11 @@ export async function chatCompletion(
   apiKey: string,
   onStream?: (content: string) => void,
   onStreamReasoning?: (content: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  model?: ModelType
 ): Promise<ChatCompletionResult> {
   const handlers: ChatCompletionHandlers = { onStream, onStreamReasoning, signal };
-  const modelName = API_CONFIG.MODELS.chat;
-  validateMessages(messages, modelName);
+  const modelName = API_CONFIG.MODELS[model ?? settings.model];
 
   if (!apiKey || apiKey.length < 30) {
     throw new Error('请先在设置页面配置您的 DeepSeek API Key');

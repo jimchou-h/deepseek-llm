@@ -137,7 +137,7 @@ const defaultSettings: ChatSettings = {
   topK: 50,
   maxLength: 2000,
   systemPrompt: '',
-  model: 'chat',
+  model: 'pro',
   functions: defaultFunctions,
 };
 
@@ -187,7 +187,21 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'settings-store',
+      version: 1,
       partialize: (state) => ({ settings: state.settings, apiKey: state.apiKey }),
+      // v0 遗留模型字符串（chat/coder/reasoner）已删除，统一回落 pro
+      migrate: (persistedState, version) => {
+        const state = persistedState as
+          | { settings?: ChatSettings; apiKey?: string }
+          | undefined;
+        if (version < 1 && state?.settings) {
+          const model = state.settings.model as string;
+          if (model !== 'pro' && model !== 'flash') {
+            return { ...state, settings: { ...state.settings, model: 'pro' as const } };
+          }
+        }
+        return state;
+      },
       onRehydrateStorage: () => (state) => {
         if (!state?.settings.functions?.length) {
           state?.resetFunctions();

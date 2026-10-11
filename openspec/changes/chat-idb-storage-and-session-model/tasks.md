@@ -6,11 +6,11 @@
 
 ## 2. 水合 gating
 
-- [ ] 2.1 新增 `use-chat-hydrated` 钩子（订阅 `persist.hasHydrated`/`onFinishHydration`），`session-rail` 与聊天主区（消息列表+输入区）在水合完成前渲染静态骨架并禁用交互。涉及层级：hook → 两个组件 → chat 页面。验收：硬刷新不出现"先空会话再跳出真实历史"；水合前输入框/新建/删除均不可用，水合后恢复；对应场景对照 chat-storage-persistence spec。
+- [x] 2.1 新增 `use-chat-hydrated` 钩子（订阅 `persist.hasHydrated`/`onFinishHydration`），`session-rail` 与聊天主区（消息列表+输入区）在水合完成前渲染静态骨架并禁用交互。涉及层级：hook → 两个组件 → chat 页面。验收：硬刷新不出现"先空会话再跳出真实历史"；水合前输入框/新建/删除均不可用，水合后恢复；对应场景对照 chat-storage-persistence spec。
 
 ## 3. 模型基础（全局真正生效 + 仅 pro/flash）
 
-- [ ] 3.1 `API_CONFIG.MODELS` 重写为 `{ pro: 'deepseek-v4-pro', flash: 'deepseek-v4-flash' }`，删除 `chat/coder/reasoner`；`ChatSettings.model` 类型收紧为 `ModelType`；settings-store 默认 `'pro'`、persist migrate 把旧值映射为 `'pro'`；设置面板下拉改为 Pro/Flash 两档；`chatCompletion` 显式接收 model 参数、删除 reasoner 校验分支；`deepseekopenapi.ts` 两处 `MODELS['chat']` 引用改为 `MODELS.pro`。涉及层级：config → types → settings-store → settings-panel → API。验收：单测（mock fetch）断言请求体 `model` 与传入档位一致；设置页选 Flash 后请求走 `deepseek-v4-flash`；lint/tsc/vitest 全绿。
+- [x] 3.1 `API_CONFIG.MODELS` 重写为 `{ pro: 'deepseek-v4-pro', flash: 'deepseek-v4-flash' }`，删除 `chat/coder/reasoner`；`ChatSettings.model` 类型收紧为 `ModelType`；settings-store 默认 `'pro'`、persist migrate 把旧值映射为 `'pro'`；设置面板下拉改为 Pro/Flash 两档；`chatCompletion` 增加可选 `model` 参数（缺省回落 `settings.model`）、删除 reasoner 校验分支；`deepseekopenapi.ts` 的 `MODELS['chat']` 引用改为按 `settings.model` 取档。涉及层级：config → types → settings-store → settings-panel → API。验收：单测（mock fetch）断言请求体 `model` 与传入档位一致；设置页选 Flash 后请求走 `deepseek-v4-flash`；tsc/vitest 全绿。
 
 ## 4. 会话级模型覆盖
 

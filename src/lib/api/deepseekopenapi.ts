@@ -4,17 +4,6 @@ import { executeFunctionCall } from './function-handler';
 // import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
-// 验证消息序列是否合法
-function validateMessages(messages: ChatCompletionMessageParam[], model: string) {
-  if (model === 'deepseek-reasoner') {
-    for (let i = 1; i < messages.length; i++) {
-      if (messages[i].role === messages[i - 1].role) {
-        throw new Error('使用 deepseek-reasoner 模型时，消息序列中的用户和助手消息必须交替出现');
-      }
-    }
-  }
-}
-
 export async function chatCompletion(
   messages: ChatCompletionMessageParam[],
   settings: Settings,
@@ -28,19 +17,16 @@ export async function chatCompletion(
   // });
 
   try {
-    const modelName: string = API_CONFIG.MODELS['chat'];
-    // 验证消息序列
-    validateMessages(messages, modelName);
+    const modelName = API_CONFIG.MODELS[settings.model];
 
-    // 只在非 deepseek-reasoner 模型时启用函数调用
-    const tools = modelName !== 'deepseek-reasoner' ? settings.functions?.map(func => ({
+    const tools = settings.functions?.map(func => ({
       type: 'function' as const,
       function: {
         name: func.name,
         description: func.description,
         parameters: func.parameters,
       },
-    })) : undefined;
+    }));
 
     if (!apiKey || apiKey.length < 30) {
       throw new Error('请先在设置页面配置您的 DeepSeek API Key');
@@ -54,7 +40,7 @@ export async function chatCompletion(
         'Accept': 'text/event-stream',
       },
       body: JSON.stringify({
-        model: API_CONFIG.MODELS['chat'],
+        model: modelName,
         messages: messages.map(({ role, content }) => ({ role, content })),
         temperature: settings.temperature,
         ...(tools && tools.length > 0 ? { tools } : {}),
@@ -162,7 +148,7 @@ export async function chatCompletion(
                         'Accept': 'text/event-stream',
                       },
                       body: JSON.stringify({
-                        model: API_CONFIG.MODELS['chat'],
+                        model: modelName,
                         messages: [
                           ...messages,
                           {

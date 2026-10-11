@@ -45,14 +45,13 @@ export function SettingsPanel() {
         onFinish={handleSubmit}
       >
         <Form.Item
-          label="模型"
+          label="新对话默认模型"
           name="model"
-          tooltip="选择要使用的 DeepSeek 模型"
+          tooltip="新建会话默认使用该模型；可在对话工具栏为单个会话覆盖"
         >
           <Select>
-            <Select.Option value="chat">DeepSeek Chat</Select.Option>
-            <Select.Option value="coder">DeepSeek Coder</Select.Option>
-            <Select.Option value="reasoner">DeepSeek Reasoner</Select.Option>
+            <Select.Option value="pro">DeepSeek V4 Pro</Select.Option>
+            <Select.Option value="flash">DeepSeek V4 Flash</Select.Option>
           </Select>
         </Form.Item>
 
