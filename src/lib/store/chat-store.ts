@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Message } from '@/types';
+import type { ModelType } from '@/lib/api/config';
 import {
   Session,
   createEmptySession,
@@ -31,6 +32,7 @@ interface ChatState {
   addMessage: (sessionId: string, message: Message) => void;
   deleteMessage: (sessionId: string, timestamp: number) => void;
   clearMessages: (sessionId: string) => void;
+  setSessionModel: (sessionId: string, model: ModelType) => void;
   updateContextMessageLimit: (limit: number) => void;
   getActiveSession: () => Session | null;
 }
@@ -140,6 +142,14 @@ export const useChatStore = create<ChatState>()(
                   updatedAt: Date.now(),
                 }
               : session
+          ),
+        }));
+      },
+
+      setSessionModel: (sessionId, model) => {
+        set((state) => ({
+          sessions: state.sessions.map((session) =>
+            session.id === sessionId ? { ...session, model } : session
           ),
         }));
       },

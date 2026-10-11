@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Message } from '@/types';
+import type { ModelType } from '@/lib/api/config';
 
 export const DEFAULT_SESSION_TITLE = '新对话';
 export const TITLE_MAX_LENGTH = 30;
@@ -10,6 +11,8 @@ export interface Session {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  /** 会话级模型覆盖；缺省跟随全局设置 */
+  model?: ModelType;
 }
 
 export function truncateTitle(content: string, maxLength = TITLE_MAX_LENGTH): string {

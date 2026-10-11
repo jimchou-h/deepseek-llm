@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Input, Button, message, Tooltip, Modal } from 'antd';
+import { Input, Button, message, Tooltip, Modal, Select } from 'antd';
 import {
   SendOutlined,
   DeleteOutlined,
@@ -15,6 +15,8 @@ import { useChatHydrated } from '@/hooks/use-chat-hydrated';
 import { chatCompletion } from '@/lib/api/deepseek';
 import { useChatShortcuts } from '@/hooks/use-chat-shortcuts';
 import { buildApiMessages } from '@/lib/chat/context-window';
+import { resolveSessionModel } from '@/lib/chat/session-model';
+import type { ModelType } from '@/lib/api/config';
 import { createRafThrottle } from '@/lib/chat/raf-throttle';
 import {
   abortSessionRun,
@@ -29,6 +31,11 @@ import type { Message } from '@/types';
 
 const EMPTY_MESSAGES: Message[] = [];
 
+const MODEL_OPTIONS: { value: ModelType; label: string }[] = [
+  { value: 'pro', label: 'Pro' },
+  { value: 'flash', label: 'Flash' },
+];
+
 export const ChatInput = () => {
   const [input, setInput] = useState('');
   /** 累积正文，停止时可对照（主落盘仍用 response.content） */
@@ -42,6 +49,11 @@ export const ChatInput = () => {
   });
   const addMessage = useChatStore((s) => s.addMessage);
   const clearMessages = useChatStore((s) => s.clearMessages);
+  const setSessionModel = useChatStore((s) => s.setSessionModel);
+  const sessionModel = useChatStore((s) => {
+    const id = s.activeSessionId;
+    return id ? s.sessions.find((session) => session.id === id)?.model : undefined;
+  });
 
   const isLoading = useChatStreamingStore((s) =>
     Boolean(activeSessionId && s.loadingBySessionId[activeSessionId])
@@ -79,8 +91,9 @@ export const ChatInput = () => {
     // 同会话新 run 会 abort 旧 controller；旧 finally 靠 runId 校验不清理新任务
     const run = startSessionRun(sessionId);
     const streaming = useChatStreamingStore.getState();
-    const sessionMessages =
-      useChatStore.getState().sessions.find((s) => s.id === sessionId)?.messages ?? [];
+    const session = useChatStore.getState().sessions.find((s) => s.id === sessionId);
+    const sessionMessages = session?.messages ?? [];
+    const model = resolveSessionModel(session?.model, settings.model);
 
     const userMessage = {
       role: 'user' as const,
@@ -131,7 +144,8 @@ export const ChatInput = () => {
           partialRef.current.reasoning = reasoningContent;
           pushReasoning(reasoningContent);
         },
-        run.controller.signal
+        run.controller.signal,
+        model
       );
 
       if (!isCurrentRun(sessionId, run.runId)) {
@@ -244,7 +258,21 @@ export const ChatInput = () => {
   return (
     <div className={styles.container}>
       <div className={styles.toolbar}>
-        <TemplateSelector onSelect={handleTemplateSelect} disabled={isLoading || !hydrated} />
+        <div className={styles.toolbarLeft}>
+          <TemplateSelector onSelect={handleTemplateSelect} disabled={isLoading || !hydrated} />
+          <Tooltip title="本会话模型（下一条消息起生效，缺省跟随全局设置）">
+            <Select
+              size="small"
+              className={styles.modelSelect}
+              value={resolveSessionModel(sessionModel, settings.model)}
+              disabled={isLoading || !hydrated || !activeSessionId}
+              options={MODEL_OPTIONS}
+              onChange={(m: ModelType) => {
+                if (activeSessionId) setSessionModel(activeSessionId, m);
+              }}
+            />
+          </Tooltip>
+        </div>
         <div className={styles.toolbarActions}>
           <Tooltip title="导出对话">
             <Button

@@ -93,4 +93,19 @@ describe('useChatStore multi-session', () => {
     useChatStore.getState().updateContextMessageLimit(0);
     expect(useChatStore.getState().contextMessageLimit).toBe(1);
   });
+
+  it('sets the model override only on the target session', () => {
+    const a = useChatStore.getState().activeSessionId!;
+    const b = useChatStore.getState().createSession();
+    useChatStore.getState().setSessionModel(a, 'flash');
+    expect(useChatStore.getState().sessions.find((s) => s.id === a)?.model).toBe('flash');
+    expect(useChatStore.getState().sessions.find((s) => s.id === b)?.model).toBeUndefined();
+  });
+
+  it('ignores setSessionModel for an unknown session', () => {
+    useChatStore.getState().setSessionModel('no-such-session', 'pro');
+    for (const session of useChatStore.getState().sessions) {
+      expect(session.model).toBeUndefined();
+    }
+  });
 });

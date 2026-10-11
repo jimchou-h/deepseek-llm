@@ -11,6 +11,18 @@
   padding: 0 2px;
 }
 
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modelSelect {
+  width: 92px;
+  flex-shrink: 0;
+}
+
 .toolbarActions {
   display: flex;
   gap: 8px;

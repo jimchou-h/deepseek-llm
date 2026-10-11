@@ -14,7 +14,7 @@
 
 ## 4. 会话级模型覆盖
 
-- [ ] 4.1 `Session` 增加可选 `model` 字段与 `setSessionModel` action；新增 `resolveSessionModel` 纯函数（显式优先、缺省回落全局）；`ChatInput` toolbar 增加模型下拉（显示当前会话生效模型，更改只影响当前会话、下一条消息起生效），发送时经 resolve 后传入 `chatCompletion`。涉及层级：session-utils → chat-store → chat-input → 发送编排。验收：`resolveSessionModel` 单测（显式/回落/切换会话不串）；手动验证 A 会话 Flash、B 会话 Pro 时 Network 请求体 model 各自正确；刷新后各会话选择恢复。
+- [x] 4.1 `Session` 增加可选 `model` 字段与 `setSessionModel` action；新增 `resolveSessionModel` 纯函数（显式优先、缺省回落全局）；`ChatInput` toolbar 增加模型下拉（显示当前会话生效模型，更改只影响当前会话、下一条消息起生效），发送时经 resolve 后传入 `chatCompletion`。涉及层级：session-utils → chat-store → chat-input → 发送编排。验收：`resolveSessionModel` 单测（显式/回落/切换会话不串）；手动验证 A 会话 Flash、B 会话 Pro 时 Network 请求体 model 各自正确；刷新后各会话选择恢复。
 
 ## 5. 省 token
 
