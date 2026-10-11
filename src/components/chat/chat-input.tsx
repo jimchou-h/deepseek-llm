@@ -11,6 +11,7 @@ import {
 import { useChatStore } from '@/lib/store/chat-store';
 import { useChatStreamingStore } from '@/lib/store/chat-streaming-store';
 import { useSettingsStore } from '@/lib/store/settings-store';
+import { useChatHydrated } from '@/hooks/use-chat-hydrated';
 import { chatCompletion } from '@/lib/api/deepseek';
 import { useChatShortcuts } from '@/hooks/use-chat-shortcuts';
 import { buildApiMessages } from '@/lib/chat/context-window';
@@ -45,6 +46,7 @@ export const ChatInput = () => {
   const isLoading = useChatStreamingStore((s) =>
     Boolean(activeSessionId && s.loadingBySessionId[activeSessionId])
   );
+  const hydrated = useChatHydrated();
 
   const { settings, apiKey, updateSettings } = useSettingsStore();
 
@@ -178,7 +180,7 @@ export const ChatInput = () => {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !hydrated) return;
     const text = input;
     setInput('');
     await sendMessage(text);
@@ -242,7 +244,7 @@ export const ChatInput = () => {
   return (
     <div className={styles.container}>
       <div className={styles.toolbar}>
-        <TemplateSelector onSelect={handleTemplateSelect} disabled={isLoading} />
+        <TemplateSelector onSelect={handleTemplateSelect} disabled={isLoading || !hydrated} />
         <div className={styles.toolbarActions}>
           <Tooltip title="导出对话">
             <Button
@@ -268,7 +270,7 @@ export const ChatInput = () => {
             placeholder="输入消息... (Ctrl + Enter 发送)"
             autoSize={{ minRows: 1, maxRows: 4 }}
             className={styles.textarea}
-            disabled={isLoading}
+            disabled={isLoading || !hydrated}
           />
           {isLoading ? (
             <Tooltip title="停止接收（上游模型可能仍继续生成）">
@@ -288,6 +290,7 @@ export const ChatInput = () => {
                 icon={<SendOutlined />}
                 onClick={() => handleSubmit()}
                 className={styles.sendButton}
+                disabled={!hydrated}
               >
                 发送
               </Button>

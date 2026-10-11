@@ -98,4 +98,37 @@ describe('chat-store IndexedDB persistence', () => {
     });
     expect(useChatStore.getState().activeSessionId).toBe('s-old');
   });
+
+  it('exposes hasHydrated=false before and true after async hydration', async () => {
+    vi.stubGlobal('indexedDB', {});
+    idb.store.set(
+      'chat-store',
+      JSON.stringify({
+        state: {
+          sessions: [
+            { id: 's-h', title: 't', messages: [], createdAt: 1, updatedAt: 1 },
+          ],
+          activeSessionId: 's-h',
+          contextMessageLimit: 20,
+        },
+        version: 2,
+      })
+    );
+    const originalGet = idb.get.getMockImplementation()!;
+    idb.get.mockImplementationOnce(async (k: string) => {
+      await new Promise((r) => setTimeout(r, 50));
+      return originalGet(k);
+    });
+
+    const { useChatStore } = await import('./chat-store');
+    expect(useChatStore.persist.hasHydrated()).toBe(false);
+
+    await vi.waitFor(() => {
+      expect(useChatStore.persist.hasHydrated()).toBe(true);
+    });
+
+    const fired: boolean[] = [];
+    useChatStore.persist.onFinishHydration(() => fired.push(true));
+    expect(fired).toHaveLength(0);
+  });
 });

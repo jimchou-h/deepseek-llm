@@ -4,6 +4,7 @@ import { Button, Popconfirm } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useChatStreamingStore } from '@/lib/store/chat-streaming-store';
+import { useChatHydrated } from '@/hooks/use-chat-hydrated';
 import styles from '@/styles/chat/session-rail.module.css';
 
 interface SessionRailProps {
@@ -17,6 +18,7 @@ export function SessionRail({ onSessionSelect }: SessionRailProps) {
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const deleteSession = useChatStore((s) => s.deleteSession);
   const loadingBySessionId = useChatStreamingStore((s) => s.loadingBySessionId);
+  const hydrated = useChatHydrated();
 
   const sorted = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -33,6 +35,7 @@ export function SessionRail({ onSessionSelect }: SessionRailProps) {
           type="primary"
           size="small"
           icon={<PlusOutlined />}
+          disabled={!hydrated}
           onClick={() => {
             createSession();
             onSessionSelect?.();
@@ -42,7 +45,12 @@ export function SessionRail({ onSessionSelect }: SessionRailProps) {
         </Button>
       </div>
       <div className={styles.list} role="list">
-        {sorted.map((session) => {
+        {!hydrated &&
+          Array.from({ length: 4 }, (_, i) => (
+            <div key={`sk-${i}`} className={styles.skeletonItem} aria-hidden="true" />
+          ))}
+        {hydrated &&
+          sorted.map((session) => {
           const active = session.id === activeSessionId;
           const streaming = Boolean(loadingBySessionId[session.id]);
           return (

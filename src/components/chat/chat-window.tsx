@@ -3,6 +3,7 @@
 import { Message } from '@/types';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useChatStreamingStore } from '@/lib/store/chat-streaming-store';
+import { useChatHydrated } from '@/hooks/use-chat-hydrated';
 import { formatDate } from '@/lib/utils';
 import { Card, Avatar, Spin, Button, Popconfirm, message as antdMessage } from 'antd';
 import { UserOutlined, RobotOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons';
@@ -144,6 +145,7 @@ const StreamingBubble = memo(function StreamingBubble({
 });
 
 export const ChatWindow = () => {
+  const hydrated = useChatHydrated();
   const activeSessionId = useChatStore((state) => state.activeSessionId);
   const messages = useChatStore((state) => {
     const id = state.activeSessionId;
@@ -197,6 +199,19 @@ export const ChatWindow = () => {
     },
     [onDelete]
   );
+
+  if (!hydrated) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.skeletonList} aria-hidden="true">
+          <div className={styles.skeletonRow} />
+          <div className={`${styles.skeletonRow} ${styles.skeletonRowWide}`} />
+          <div className={styles.skeletonRow} />
+          <div className={`${styles.skeletonRow} ${styles.skeletonRowWide}`} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
