@@ -1,10 +1,9 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Message } from '@/types';
 import {
   Session,
   createEmptySession,
-  migrateLegacyChatState,
   titleAfterFirstUserMessage,
   DEFAULT_SESSION_TITLE,
 } from '@/lib/chat/session-utils';
@@ -12,8 +11,14 @@ import {
   DEFAULT_CONTEXT_MESSAGE_LIMIT,
   normalizeContextMessageLimit,
 } from '@/lib/chat/context-window';
+import { idbJsonStorage } from '@/lib/storage/idb-json-storage';
 
 export type { Session };
+
+// 旧版把 chat-store 存在 localStorage 并已逼近配额上限；不迁移内容，直接清除释放空间
+if (typeof window !== 'undefined') {
+  localStorage.removeItem('chat-store');
+}
 
 interface ChatState {
   sessions: Session[];
@@ -150,28 +155,13 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: 'chat-store',
-      version: 1,
+      version: 2,
+      storage: createJSONStorage(() => idbJsonStorage),
       partialize: (state) => ({
         sessions: state.sessions,
         activeSessionId: state.activeSessionId,
         contextMessageLimit: state.contextMessageLimit,
       }),
-      migrate: (persistedState) => {
-        const legacy = (persistedState ?? {}) as {
-          messages?: Message[];
-          sessions?: Session[];
-          activeSessionId?: string | null;
-          contextMessageLimit?: number;
-        };
-        const migrated = migrateLegacyChatState(legacy);
-        return {
-          sessions: migrated.sessions,
-          activeSessionId: migrated.activeSessionId,
-          contextMessageLimit: normalizeContextMessageLimit(
-            legacy.contextMessageLimit ?? DEFAULT_CONTEXT_MESSAGE_LIMIT
-          ),
-        };
-      },
     }
   )
 );

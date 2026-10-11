@@ -29,37 +29,6 @@ export function createEmptySession(now = Date.now()): Session {
   };
 }
 
-export interface LegacyChatPersist {
-  messages?: Message[];
-  sessions?: Session[];
-  activeSessionId?: string | null;
-}
-
-export function migrateLegacyChatState(
-  persisted: LegacyChatPersist,
-  now = Date.now()
-): { sessions: Session[]; activeSessionId: string } {
-  if (persisted.sessions && persisted.sessions.length > 0) {
-    const activeSessionId =
-      persisted.activeSessionId &&
-      persisted.sessions.some((s) => s.id === persisted.activeSessionId)
-        ? persisted.activeSessionId
-        : persisted.sessions[0].id;
-    return { sessions: persisted.sessions, activeSessionId };
-  }
-
-  const session = createEmptySession(now);
-  session.messages = persisted.messages ?? [];
-  if (session.messages.length > 0) {
-    const firstUser = session.messages.find((m) => m.role === 'user');
-    if (firstUser) {
-      session.title = truncateTitle(firstUser.content);
-    }
-  }
-
-  return { sessions: [session], activeSessionId: session.id };
-}
-
 export function titleAfterFirstUserMessage(
   currentTitle: string,
   messagesBefore: Message[],
