@@ -4,11 +4,11 @@
 
 ## 1. Lint 门禁可用
 
-- [x] 1.1 修复 ESLint 使 `npm run lint` 端到端可用：从 `eslint.config.mjs` 移除 `next/typescript` extends（保留 `next/core-web-vitals`），运行 `npm run lint`，逐条修复暴露的存量 error（不用规则级 ignore 掩盖；确需豁免的写行级 disable + 原因注释）。端到端目标：master 上 `npm run lint` 退出码 0 且 tsc/vitest 不受影响。涉及：`eslint.config.mjs` + lint 暴露的源文件。
+- [x] 1.1 修复 ESLint 使 `npm run lint` 端到端可用。实施修正：next@14.1 的 `next lint` 只读 `.eslintrc.*`，故以新增 `.eslintrc.json`（extends 仅 `next/core-web-vitals`）为事实源，`eslint.config.mjs` 改为经 FlatCompat 委托同一份 `.eslintrc.json`；移除坏的 `next/typescript` extends；逐条修复暴露的 2 个 display-name + 3 个 exhaustive-deps。端到端目标：master 上 `npm run lint` 退出码 0 且 tsc/vitest 不受影响。
 
 ## 2. 死代码与闲置依赖清理
 
-- [ ] 2.1 删除 `src/lib/api/deepseekopenapi.ts`、`src/lib/api/coze.ts`、`src/lib/api/function-handler.ts`、`src/lib/utils/function-utils.ts` 与 devDependencies `framer-motion`、`@types/uuid`（保留 `openai`：type-only 在用），重装依赖刷新 lockfile。端到端目标：删除后三大门禁全绿、`function-tester` 链路（functions 页）编译与测试不受波及、应用行为零变化。涉及：`src/lib/api/**`、`src/lib/utils/**`、`package.json`、lockfile。
+- [ ] 2.1 删除确认零引用的 `src/lib/api/deepseekopenapi.ts`、`src/lib/api/coze.ts`、`src/components/chat/message-content-r1.tsx` 与 `config.ts` 的 `BASE_COZE_URL`，删除 devDependencies `framer-motion`、`@types/uuid`（保留 `openai`：type-only 在用），重装依赖刷新 lockfile。**保留** `function-handler.ts`/`function-utils.ts`（复核在 `function-tester ← function-test-modal` 活跃链路上）。端到端目标：删除后三大门禁全绿、functions 页编译与测试不受波及、应用行为零变化。涉及：`src/lib/api/**`、`src/components/chat/**`、`package.json`、lockfile。
 
 ## 3. CONTEXT.md 约定落地
 

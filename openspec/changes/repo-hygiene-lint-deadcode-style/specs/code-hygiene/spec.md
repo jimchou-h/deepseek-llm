@@ -22,7 +22,7 @@
 
 #### Scenario: 删除死代码后行为不变
 
-- WHEN 删除 `deepseekopenapi.ts`、`coze.ts`、`function-handler.ts`、`function-utils.ts` 与依赖 `framer-motion`、`@types/uuid`
+- WHEN 删除全仓零引用的 `deepseekopenapi.ts`、`coze.ts`、`message-content-r1.tsx` 与依赖 `framer-motion`、`@types/uuid`
 - THEN `tsc --noEmit`、`vitest run`、`npm run lint` SHALL 全部通过，且应用运行行为无任何变化
 
 #### Scenario: 新增模块必须有调用方

@@ -7,7 +7,7 @@
 ## What Changes
 
 - 修复 ESLint flat config，使 `npm run lint` 可运行、可修，并把 lint 纳入每次变更的验收门禁（与 tsc / vitest / openspec validate 并列）。
-- 删除确认无任何引用来源的死代码四件套：`src/lib/api/deepseekopenapi.ts`、`src/lib/api/coze.ts`、`src/lib/api/function-handler.ts`、`src/lib/utils/function-utils.ts`。
+- 删除确认无任何引用来源的死代码：`src/lib/api/deepseekopenapi.ts`、`src/lib/api/coze.ts`、`src/components/chat/message-content-r1.tsx`，及 `config.ts` 中仅被 coze 使用的 `BASE_COZE_URL`。（注：`function-handler.ts`/`function-utils.ts` 经复核在 `function-tester ← function-test-modal` 活跃链路上，移出删除清单。）
 - 移除闲置依赖：`framer-motion`（全仓零引用）、`@types/uuid`（uuid v11 自带类型）；保留 `openai`（type-only import 在用）。
 - 新建根 `CONTEXT.md`：记录领域术语表与样式双轨使用边界（布局皮肤用 CSS Modules，markdown 渲染区允许 Tailwind 等），补上 `agents.md` 已引用但不存在的文档。
 

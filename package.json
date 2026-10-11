@@ -18,9 +18,7 @@
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.0.0",
     "@tailwindcss/typography": "^0.5.16",
-    "@types/uuid": "^10.0.0",
     "antd": "^5.14.1",
-    "framer-motion": "^11.18.1",
     "idb-keyval": "^6.3.0",
     "next": "14.1.0",
     "openai": "^4.80.0",

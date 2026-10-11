@@ -3,7 +3,7 @@
 ## Context
 
 - `eslint.config.mjs` 使用 FlatCompat extends `next/core-web-vitals` + `next/typescript`，但锁定的 `eslint-config-next@14.1.0` 没有 `next/typescript`（该共享配置 14.2+ 才引入），且 devDep 是 `eslint@^8`，`npm run lint` / `npx eslint .` 均直接报错。
-- 死代码经全仓 import 反查确认零调用方：`deepseekopenapi.ts`、`coze.ts`、`function-handler.ts`（仅被自己引用于 utils）、`function-utils.ts`（仅被 function-handler 引用）。存活的函数相关链路是 `function-tester.ts` ← `function-test-modal.tsx`，不受影响。
+- 死代码经全仓 import 反查确认零调用方：`deepseekopenapi.ts`、`coze.ts`、`message-content-r1.tsx`（零引用；`config.ts` 的 `BASE_COZE_URL` 仅被 coze 使用）。**修正**：`function-handler.ts`/`function-utils.ts` 初判为死，复核发现在 `function-tester`（← `function-test-modal` ← functions 页）活跃链路上（`function-tester` → `function-handler` → `function-utils`），故保留。
 - `framer-motion` 全仓零引用；`@types/uuid` 冗余（uuid v11 自带类型）；`openai` 仅 type-only import，保留。
 - 样式现状：`src/styles/**` CSS Modules 为主，`message-content.tsx` / `code-block.tsx` 等 markdown 渲染区用 Tailwind 工具类。
 

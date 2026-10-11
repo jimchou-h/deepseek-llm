@@ -1,7 +1,6 @@
 export const API_CONFIG = {
   BASE_URL: 'https://api.deepseek.com',
   BASE_URL_V0: 'https://api.deepseek.com',
-  BASE_COZE_URL: 'https://api.coze.cn/v1',
   MODELS: {
     pro: 'deepseek-v4-pro',
     flash: 'deepseek-v4-flash',
