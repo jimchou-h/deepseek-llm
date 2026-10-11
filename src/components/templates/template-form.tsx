@@ -17,7 +17,7 @@ export function TemplateForm({ data, onSubmit, onCancel }: TemplateFormProps) {
     if (data) {
       form.setFieldsValue(data);
     }
-  }, [data]);
+  }, [data, form]);
 
   return (
     <Form

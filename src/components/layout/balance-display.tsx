@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, Statistic, Tooltip } from 'antd';
 import { WalletOutlined } from '@ant-design/icons';
 import { useSettingsStore } from '@/lib/store/settings-store';
@@ -12,7 +12,7 @@ export const BalanceDisplay = () => {
   const [balance, setBalance] = useState<BalanceResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     if (!apiKey) {
       setBalance(null);
       return;
@@ -28,12 +28,12 @@ export const BalanceDisplay = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiKey]);
 
   // 监听 apiKey 变化
   useEffect(() => {
     fetchBalance();
-  }, [apiKey]);
+  }, [apiKey, fetchBalance]);
 
   // 定时刷新
   useEffect(() => {
@@ -41,7 +41,7 @@ export const BalanceDisplay = () => {
     
     const interval = setInterval(fetchBalance, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [apiKey]);
+  }, [apiKey, fetchBalance]);
 
   if (!balance || !balance.is_available) return null;
 

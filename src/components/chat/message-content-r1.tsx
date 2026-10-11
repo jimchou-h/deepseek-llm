@@ -8,7 +8,7 @@ interface MessageContentProps {
   content: string;
 }
 
-export const MessageContentR1 = memo(({ content }: MessageContentProps) => {
+export const MessageContentR1 = memo(function MessageContentR1({ content }: MessageContentProps) {
 
   return (
     <Suspense fallback={<Spin />}>

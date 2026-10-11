@@ -1,41 +1,19 @@
 'use client';
 
-import React, { Suspense, useState, memo } from 'react';
+import React, { memo, useState, lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button, message, Spin } from 'antd';
 import { CopyOutlined, CheckOutlined } from '@ant-design/icons';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-const CodeBlock = memo(({ language, code, onCopy, isCopied }: {
-  language: string;
-  code: string;
-  onCopy: (code: string) => void;
-  isCopied: boolean;
-}) => (
-  <div className="relative group">
-    <Button
-      type="text"
-      size="small"
-      className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-      icon={isCopied ? <CheckOutlined /> : <CopyOutlined />}
-      onClick={() => onCopy(code)}
-    />
-    <SyntaxHighlighter
-      language={language}
-      style={vscDarkPlus}
-      PreTag="div"
-    >
-      {code}
-    </SyntaxHighlighter>
-  </div>
-));
+const LazyCodeBlock = lazy(() =>
+  import('./code-block').then((m) => ({ default: m.CodeBlock }))
+);
 
 interface MessageContentProps {
   content: string;
 }
 
-export const MessageContent = memo(({ content }: MessageContentProps) => {
+export const MessageContent = memo(function MessageContent({ content }: MessageContentProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const handleCopyCode = async (code: string) => {
@@ -44,35 +22,39 @@ export const MessageContent = memo(({ content }: MessageContentProps) => {
       setCopiedCode(code);
       message.success('代码已复制');
       setTimeout(() => setCopiedCode(null), 2000);
-    } catch (err) {
+    } catch {
       message.error('复制失败');
     }
   };
 
   return (
-    <Suspense fallback={<Spin />}>
-      <ReactMarkdown
-        components={{
-          code: ({ inline, className, children, ...props }: any) => {
-            const match = /language-(\w+)/.exec(className || '');
-            const code = String(children).replace(/\n$/, '');
+    <ReactMarkdown
+      components={{
+        code: ({ inline, className, children, ...props }: any) => {
+          const match = /language-(\w+)/.exec(className || '');
+          const code = String(children).replace(/\n$/, '');
 
-            if (!inline && match) {
-              return (
-                <CodeBlock
+          if (!inline && match) {
+            return (
+              <Suspense fallback={<pre className="p-3 bg-slate-900 text-slate-100 rounded-lg overflow-x-auto text-sm">{code}</pre>}>
+                <LazyCodeBlock
                   language={match[1]}
                   code={code}
                   onCopy={handleCopyCode}
                   isCopied={copiedCode === code}
                 />
-              );
-            }
-            return <code className={className} {...props}>{children}</code>;
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </Suspense>
+              </Suspense>
+            );
+          }
+          return (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   );
-}); 
+});
