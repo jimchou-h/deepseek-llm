@@ -2,7 +2,7 @@
 
 ## 1. IndexedDB 持久化
 
-- [ ] 1.1 新增 `idb-keyval` 依赖与 `idbJsonStorage` 适配器（含 SSR/隐私模式守卫），`chat-store` persist 切到该适配器、version 提为 2，模块加载时清除 localStorage 旧 `chat-store` key；`chat-persist-thrash.repro.test.ts` 改按新存储 stub。涉及层级：storage 模块 → chat-store → 测试。验收：mock idb-keyval 单测覆盖读/写/删与旧 key 清理；chat-store 既有测试全绿；浏览器刷新后会话从 IndexedDB 恢复且 localStorage 无 `chat-store`。
+- [x] 1.1 新增 `idb-keyval` 依赖与 `idbJsonStorage` 适配器（含 SSR/隐私模式守卫），`chat-store` persist 切到该适配器、version 提为 2，模块加载时清除 localStorage 旧 `chat-store` key；`chat-persist-thrash.repro.test.ts` 改按新存储 stub。涉及层级：storage 模块 → chat-store → 测试。验收：mock idb-keyval 单测覆盖读/写/删与旧 key 清理；chat-store 既有测试全绿；浏览器刷新后会话从 IndexedDB 恢复且 localStorage 无 `chat-store`。
 
 ## 2. 水合 gating
 
