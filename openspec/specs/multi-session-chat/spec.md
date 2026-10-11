@@ -48,12 +48,3 @@ The system SHALL allow switching the active session while a streaming response i
 - **THEN** the input for session B SHALL NOT be blocked solely because A is streaming
 - **AND** returning to A SHALL show A's in-progress or completed stream state
 
-### Requirement: Migrate legacy single-thread store
-
-On load, if persisted chat data uses the legacy single `messages` array without sessions, the system SHALL wrap those messages into one default session and preserve content.
-
-#### Scenario: Legacy messages preserved
-
-- **WHEN** the store loads legacy `{ messages: [...] }` data
-- **THEN** those messages appear in a single migrated session that becomes active
-
