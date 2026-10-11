@@ -262,7 +262,6 @@ export const ChatInput = () => {
           <TemplateSelector onSelect={handleTemplateSelect} disabled={isLoading || !hydrated} />
           <Tooltip title="本会话模型（下一条消息起生效，缺省跟随全局设置）">
             <Select
-              size="small"
               className={styles.modelSelect}
               value={resolveSessionModel(sessionModel, settings.model)}
               disabled={isLoading || !hydrated || !activeSessionId}
