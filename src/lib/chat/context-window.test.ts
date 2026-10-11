@@ -13,8 +13,9 @@ const msg = (role: Message['role'], content: string, timestamp: number): Message
 });
 
 describe('normalizeContextMessageLimit', () => {
-  it('defaults invalid values to 50', () => {
+  it('defaults invalid values to 20', () => {
     expect(normalizeContextMessageLimit(Number.NaN)).toBe(DEFAULT_CONTEXT_MESSAGE_LIMIT);
+    expect(DEFAULT_CONTEXT_MESSAGE_LIMIT).toBe(20);
   });
 
   it('enforces minimum of 1', () => {
@@ -47,7 +48,7 @@ describe('buildApiMessages', () => {
     expect(result.map((m) => m.content)).toEqual(['hi', 'hello']);
   });
 
-  it('defaults limit behavior to 50 when building with default constant', () => {
+  it('defaults limit behavior to 20 when building with default constant', () => {
     const messages = Array.from({ length: 60 }, (_, i) =>
       msg('user', `u${i}`, i + 1)
     );
@@ -55,8 +56,30 @@ describe('buildApiMessages', () => {
       messages,
       limit: DEFAULT_CONTEXT_MESSAGE_LIMIT,
     });
-    expect(result).toHaveLength(50);
-    expect(result[0].content).toBe('u10');
-    expect(result[49].content).toBe('u59');
+    expect(result).toHaveLength(20);
+    expect(result[0].content).toBe('u40');
+    expect(result[19].content).toBe('u59');
+  });
+
+  it('truncates oversized message content in the API payload copy', () => {
+    const long = 'x'.repeat(8500);
+    const source = msg('user', long, 1);
+    const result = buildApiMessages({
+      messages: [source],
+      limit: 20,
+    });
+    expect(result[0].content).toBe(`${'x'.repeat(8000)}\n…[truncated]`);
+    // 出参截断不得回写源消息对象
+    expect(source.content).toBe(long);
+    expect(source.content).toHaveLength(8500);
+  });
+
+  it('leaves content of exactly 8000 chars untouched', () => {
+    const exact = 'y'.repeat(8000);
+    const result = buildApiMessages({
+      messages: [msg('user', exact, 1)],
+      limit: 20,
+    });
+    expect(result[0].content).toBe(exact);
   });
 });

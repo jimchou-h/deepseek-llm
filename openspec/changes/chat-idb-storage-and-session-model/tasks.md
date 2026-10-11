@@ -18,4 +18,4 @@
 
 ## 5. 省 token
 
-- [ ] 5.1 `DEFAULT_CONTEXT_MESSAGE_LIMIT` 50→20（同步 chat-store 测试断言）；`buildApiMessages` 对超 8000 字符的单条消息截断并加 `[truncated]` 标记（仅出参，不改 store/UI 数据）；请求体固定加 `max_tokens: 8192`。涉及层级：context-window → chat-store 测试 → deepseek API。验收：context-window 单测覆盖新默认值、>8000 截断、≤8000 原样、system 不计条数；mock fetch 断言 `max_tokens`；全量测试绿。
+- [x] 5.1 `DEFAULT_CONTEXT_MESSAGE_LIMIT` 50→20（同步 chat-store 测试断言）；`buildApiMessages` 对超 8000 字符的单条消息截断并加 `[truncated]` 标记（仅出参，不改 store/UI 数据）；请求体固定加 `max_tokens: 8192`。涉及层级：context-window → chat-store 测试 → deepseek API。验收：context-window 单测覆盖新默认值、>8000 截断、≤8000 原样、system 不计条数；mock fetch 断言 `max_tokens`；全量测试绿。

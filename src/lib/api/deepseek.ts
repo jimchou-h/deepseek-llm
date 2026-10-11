@@ -163,6 +163,7 @@ export async function chatCompletion(
         model: modelName,
         messages: messages.map(({ role, content }) => ({ role, content })),
         temperature: settings.temperature,
+        max_tokens: 8192,
         // tools 暂未启用：请求体不带 tools，避免半残函数调用路径
         stream: true,
       }),

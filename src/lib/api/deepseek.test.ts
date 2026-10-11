@@ -55,6 +55,12 @@ describe('deepseek.chatCompletion model routing', () => {
     expect(captured.body?.model).toBe('deepseek-v4-flash');
   });
 
+  it('caps generation with max_tokens 8192', async () => {
+    const captured = captureFetch();
+    await chatCompletion(messages, makeSettings('pro'), API_KEY);
+    expect(captured.body?.max_tokens).toBe(8192);
+  });
+
   it('no longer rejects adjacent same-role messages (reasoner validation removed)', async () => {
     const captured = captureFetch();
     const adjacent: ChatCompletionMessageParam[] = [
